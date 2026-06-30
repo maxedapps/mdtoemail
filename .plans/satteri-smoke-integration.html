@@ -1,0 +1,1613 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<base href="file:///Users/maximilianschwarzmuller/development/projects/mdtoemail/.plans/" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Markdown Preview</title>
+<style>
+:root {
+  color-scheme: dark;
+  --preview-font-size: 15px;
+  --bg: #1a1b21;
+  --card: #1f2027;
+  --panel-2: #25262f;
+  --border: #5f87ff;
+  --border-muted: #505050;
+  --border-subtle: #28292f;
+  --panel-border: #2c2d31;
+  --text: #d4d4d4;
+  --muted: #808080;
+  --accent: #81a2be;
+  --warn: #ffff00;
+  --error: #cc6666;
+  --ok: #b5bd68;
+  --code-bg: #25262f;
+  --link: #81a2be;
+  --md-heading: #f0c674;
+  --md-link: #81a2be;
+  --md-link-url: #666666;
+  --md-code: #8abeb7;
+  --md-codeblock: #b5bd68;
+  --md-codeblock-border: #31323a;
+  --md-quote: #808080;
+  --md-quote-border: #808080;
+  --md-hr: #808080;
+  --md-list-bullet: #8abeb7;
+  --syntax-keyword: #569cd6;
+  --syntax-function: #dcdcaa;
+  --syntax-variable: #9cdcfe;
+  --syntax-string: #ce9178;
+  --syntax-number: #b5cea8;
+  --syntax-type: #4ec9b0;
+  --syntax-comment: #6a9955;
+  --syntax-operator: #d4d4d4;
+  --syntax-punctuation: #d4d4d4;
+  --syntax-error: #cc6666;
+  --annotation-bg: rgba(129, 162, 190, 0.25);
+  --annotation-border: rgba(129, 162, 190, 0.65);
+  --annotation-text: #d4d4d4;
+  --blockquote-bg: rgba(128, 128, 128, 0.16);
+  --inline-code-bg: rgba(128, 128, 128, 0.18);
+  --table-alt-bg: rgba(128, 128, 128, 0.14);
+  --md-table-border: #28292f;
+  --diff-add-bg: rgba(181, 189, 104, 0.14);
+  --diff-add-text: #b5bd68;
+  --diff-del-bg: rgba(204, 102, 102, 0.14);
+  --diff-del-text: #cc6666;
+  --diff-meta-text: #808080;
+  --diff-header-bg: rgba(129, 162, 190, 0.10);
+  --diff-header-text: #81a2be;
+  --diff-hunk-bg: rgba(129, 162, 190, 0.16);
+  --diff-hunk-text: #81a2be;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+body {
+  min-height: 100vh;
+  padding: 28px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+#preview-root {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  background: var(--card);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 24px 28px;
+  overflow-wrap: anywhere;
+  line-height: 1.58;
+  font-size: var(--preview-font-size);
+}
+#preview-root h1, #preview-root h2, #preview-root h3, #preview-root h4, #preview-root h5, #preview-root h6 {
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--md-heading);
+}
+#preview-root h1 { font-size: 1.6em; border-bottom: 0; padding-bottom: 0; }
+#preview-root h2 { font-size: 1.25em; border-bottom: 0; padding-bottom: 0; }
+#preview-root p, #preview-root ul, #preview-root ol, #preview-root blockquote, #preview-root table {
+  margin-top: 0;
+  margin-bottom: 1em;
+}
+#preview-root li::marker { color: var(--md-list-bullet); }
+#preview-root a { color: var(--md-link); text-decoration: none; }
+#preview-root a:hover { text-decoration: underline; }
+#preview-root a.uri, #preview-root .uri { color: var(--md-link-url); }
+#preview-root blockquote {
+  margin-left: 0;
+  padding: 0.2em 1em;
+  border-left: 0.25em solid var(--md-quote-border);
+  border-radius: 0 8px 8px 0;
+  background: var(--blockquote-bg);
+  color: var(--md-quote);
+}
+#preview-root pre {
+  background: var(--panel-2);
+  border: 1px solid var(--md-codeblock-border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow: auto;
+}
+#preview-root code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.9em;
+  color: var(--md-code);
+}
+#preview-root pre code {
+  color: var(--text);
+}
+#preview-root :not(pre) > code {
+  background: var(--inline-code-bg);
+  border: 1px solid var(--md-codeblock-border);
+  border-radius: 6px;
+  padding: 0.12em 0.35em;
+}
+#preview-root .annotation-marker {
+  display: inline;
+  border-radius: 4px;
+  border: 1px solid var(--annotation-border);
+  background: var(--annotation-bg);
+  color: var(--annotation-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  padding: 0 0.28em;
+}
+#preview-root .annotation-marker mjx-container {
+  margin: 0;
+}
+#preview-root pre.sourceCode.diff code > .diff-line {
+  display: block;
+  margin: 0 -4px;
+  padding: 0 4px;
+  border-radius: 4px;
+}
+#preview-root pre.sourceCode.diff code > .diff-add-line {
+  background: var(--diff-add-bg);
+  color: var(--diff-add-text);
+}
+#preview-root pre.sourceCode.diff code > .diff-del-line {
+  background: var(--diff-del-bg);
+  color: var(--diff-del-text);
+}
+#preview-root pre.sourceCode.diff code > .diff-meta-line {
+  color: var(--diff-meta-text);
+}
+#preview-root pre.sourceCode.diff code > .diff-header-line {
+  background: var(--diff-header-bg);
+  color: var(--diff-header-text);
+  font-weight: 600;
+}
+#preview-root pre.sourceCode.diff code > .diff-hunk-line {
+  background: var(--diff-hunk-bg);
+  color: var(--diff-hunk-text);
+}
+#preview-root pre.sourceCode.diff code > .diff-line .kw,
+#preview-root pre.sourceCode.diff code > .diff-line .dt,
+#preview-root pre.sourceCode.diff code > .diff-line .st,
+#preview-root pre.sourceCode.diff code > .diff-line .va {
+  color: inherit;
+  font-weight: inherit;
+}
+#preview-root code span.kw,
+#preview-root code span.cf,
+#preview-root code span.im {
+  color: var(--syntax-keyword);
+  font-weight: 600;
+}
+#preview-root code span.dt {
+  color: var(--syntax-type);
+  font-weight: 600;
+}
+#preview-root code span.fu,
+#preview-root code span.bu {
+  color: var(--syntax-function);
+}
+#preview-root code span.va,
+#preview-root code span.ot {
+  color: var(--syntax-variable);
+}
+#preview-root code span.st,
+#preview-root code span.ss,
+#preview-root code span.sc,
+#preview-root code span.ch {
+  color: var(--syntax-string);
+}
+#preview-root code span.dv,
+#preview-root code span.bn,
+#preview-root code span.fl {
+  color: var(--syntax-number);
+}
+#preview-root code span.co {
+  color: var(--syntax-comment);
+  font-style: italic;
+}
+#preview-root code span.op {
+  color: var(--syntax-operator);
+}
+#preview-root code span.pp,
+#preview-root code span.pu {
+  color: var(--syntax-punctuation);
+}
+#preview-root code span.er,
+#preview-root code span.al {
+  color: var(--syntax-error);
+  font-weight: 600;
+}
+#preview-root table {
+  border-collapse: collapse;
+  display: block;
+  max-width: 100%;
+  overflow: auto;
+}
+#preview-root th, #preview-root td {
+  border: 1px solid var(--md-table-border);
+  padding: 6px 12px;
+}
+#preview-root thead th {
+  background: var(--panel-2);
+}
+#preview-root tbody tr:nth-child(even) {
+  background: var(--table-alt-bg);
+}
+#preview-root hr {
+  border: 0;
+  border-top: 1px solid var(--md-hr);
+  margin: 1.25em 0;
+}
+#preview-root img { max-width: 100%; }
+#preview-root math[display="block"] {
+  display: block;
+  margin: 1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+#preview-root mjx-container[display="true"] {
+  display: block;
+  margin: 1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+#preview-root .mermaid-container {
+  text-align: center;
+  margin: 1em 0;
+  overflow-x: auto;
+}
+#preview-root .mermaid-container svg {
+  max-width: 100%;
+  height: auto;
+}
+</style>
+</head>
+<body>
+  <article id="preview-root"><h1 id="plan-sätteri-smoke-integration">Plan: Sätteri Smoke Integration</h1>
+<h2 id="summary">Summary</h2>
+<p>Replace the current placeholder <code>&lt;pre&gt;</code> output with real Markdown-to-HTML conversion through Sätteri while keeping the milestone deliberately small. This step proves that the CLI/config foundation can call Sätteri, map the existing <code>[markdown]</code> config flags to Sätteri feature options, preserve the current HTML shell/theme behavior, and produce test-covered Markdown output for core CommonMark/GFM cases.</p>
+<p>This is still <strong>not</strong> the final email-safe renderer. Sätteri output is web HTML and will later need sanitization, email-specific rendering, inline styles per element, diagnostics, and a table-based email wrapper.</p>
+<h2 id="clarification-status">Clarification status</h2>
+<p>No clarification is needed. The next milestone is clear: perform a Sätteri smoke integration, not the final email renderer.</p>
+<h2 id="confirmed-requirements-and-assumptions">Confirmed requirements and assumptions</h2>
+<ul>
+<li>Use TypeScript and Bun.</li>
+<li>Keep implementation simple and incremental.</li>
+<li>Prefer Bun/Node built-ins; add no new dependencies.</li>
+<li>Use already pinned <code>satteri@0.9.4</code>.</li>
+<li>Do not add a server.</li>
+<li>Keep TOML config as the source of Markdown feature settings.</li>
+<li>Preserve existing CLI behavior:
+<ul>
+<li><code>--help</code>, <code>--version</code></li>
+<li><code>-o/--output</code></li>
+<li><code>-c/--config</code></li>
+<li>one positional input file</li>
+<li>auto-load cwd <code>mdtoemail.toml</code></li>
+</ul></li>
+<li>Replace placeholder escaped Markdown with rendered Markdown HTML.</li>
+<li>Keep existing simple HTML document wrapper for now; final conservative table-based email wrapper comes later.</li>
+<li>Treat current output as a smoke/proof-of-integration layer, not production email-safe output.</li>
+<li><code>theme.linkColor</code> and element-specific styling remain mostly inactive until the email-rendering milestone.</li>
+</ul>
+<h2 id="relevant-research-findings">Relevant research findings</h2>
+<h3 id="sätteri-apis">Sätteri APIs</h3>
+<p>Sources:</p>
+<ul>
+<li><code>node_modules/satteri/dist/index.d.ts</code></li>
+<li><code>node_modules/satteri/dist/compile.d.ts</code></li>
+<li>Sätteri features docs: <code>https://satteri.bruits.org/docs/features/</code></li>
+<li>Sätteri plugin API docs: <code>https://satteri.bruits.org/docs/plugin-api/</code></li>
+<li>Sätteri plugin guide: <code>https://satteri.bruits.org/docs/plugins/</code></li>
+</ul>
+<p>Findings:</p>
+<ul>
+<li><code>markdownToHtml(source, options)</code> returns <code>{ html, frontmatter, data }</code> when all plugins are sync, or a Promise if any plugin is async.</li>
+<li><code>markdownToHtml</code> accepts:
+<ul>
+<li><code>features</code></li>
+<li><code>mdastPlugins</code></li>
+<li><code>hastPlugins</code></li>
+<li><code>fileURL</code></li>
+<li><code>data</code></li>
+</ul></li>
+<li><code>features</code> is also accepted by <code>markdownToHast</code>, <code>markdownToMdast</code>, <code>mdxToJs</code>, and <code>mdxToHast</code>.</li>
+<li>Default Sätteri features are <code>gfm: true</code> and <code>frontmatter: true</code>.</li>
+<li><code>Features</code> supports:
+<ul>
+<li><code>gfm?: boolean | GfmOptions</code></li>
+<li><code>frontmatter?: boolean</code></li>
+<li><code>math?: boolean | MathOptions</code></li>
+<li><code>headingAttributes?: boolean</code></li>
+<li><code>directive?: boolean</code></li>
+<li><code>superscript?: boolean</code></li>
+<li><code>subscript?: boolean</code></li>
+<li><code>wikilinks?: boolean</code></li>
+<li><code>smartPunctuation?: boolean | SmartPunctuationOptions</code></li>
+</ul></li>
+<li>This project currently exposes only:
+<ul>
+<li><code>markdown.gfm</code></li>
+<li><code>markdown.frontmatter</code></li>
+<li><code>markdown.rawHtml</code></li>
+</ul></li>
+<li>Sätteri frontmatter is <strong>extracted</strong> and returned separately as <code>{ kind: "yaml" | "toml", value: string }</code>; Sätteri does not parse the frontmatter body into structured data and does not render it into HTML by default.</li>
+<li>Sätteri has no documented <code>rawHtml</code> feature flag in <code>Features</code>.</li>
+<li>Markdown raw HTML is represented as <code>html</code> nodes in MDAST and as <code>raw</code> nodes in HAST.</li>
+<li>MDAST plugins can visit <code>html</code> nodes and replace them with text nodes to escape raw HTML.</li>
+<li>Empirical check with <code>satteri@0.9.4</code>:
+<ul>
+<li><code>markdownToHtml("# Hi\n\n&lt;em&gt;x&lt;/em&gt;")</code> outputs <code>&lt;h1&gt;Hi&lt;/h1&gt;\n&lt;p&gt;&lt;em&gt;x&lt;/em&gt;&lt;/p&gt;\n</code>.</li>
+<li>A simple MDAST plugin replacing <code>html</code> nodes with <code>{ type: "text", value: node.value }</code> outputs escaped raw HTML such as <code>&amp;lt;em&amp;gt;</code>.</li>
+<li>GFM tables output normal <code>&lt;table&gt;</code>, <code>&lt;thead&gt;</code>, <code>&lt;tbody&gt;</code>, <code>&lt;tr&gt;</code>, <code>&lt;th&gt;</code>, <code>&lt;td&gt;</code>.</li>
+<li>GFM task lists output <code>&lt;input type="checkbox" ...&gt;</code> inside list items and classes like <code>contains-task-list</code>; these are not email-safe and must be addressed in a later renderer/sanitizer.</li>
+</ul></li>
+</ul>
+<h3 id="bunproject-findings">Bun/project findings</h3>
+<p>Sources:</p>
+<ul>
+<li><code>package.json</code></li>
+<li><code>src/cli.ts</code></li>
+<li><code>src/config.ts</code></li>
+<li><code>test/config.test.ts</code></li>
+<li><code>PROJECT.md</code></li>
+</ul>
+<p>Findings:</p>
+<ul>
+<li>Bun version currently verified as <code>1.3.14</code>.</li>
+<li>Existing scripts:
+<ul>
+<li><code>bun test</code></li>
+<li><code>bun run typecheck</code></li>
+<li><code>bun run build</code></li>
+<li><code>bun run compile</code></li>
+</ul></li>
+<li>Existing CLI imports <code>loadConfig</code>, reads input with <code>Bun.file(...).text()</code>, writes output with <code>Bun.write(...)</code>, and currently calls <code>renderPlaceholderHtml(markdown, input, config)</code>.</li>
+<li><code>src/config.ts</code> already has the needed Markdown settings:
+<ul>
+<li><code>gfm</code></li>
+<li><code>frontmatter</code></li>
+<li><code>rawHtml</code></li>
+</ul></li>
+<li>Existing tests cover config and output path derivation only.</li>
+</ul>
+<h2 id="current-state">Current state</h2>
+<p>Current output shape:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;!doctype</span> html<span class="dt">&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">html</span><span class="dt">&gt;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;</span><span class="kw">head</span><span class="dt">&gt;</span>...<span class="dt">&lt;/</span><span class="kw">head</span><span class="dt">&gt;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;</span><span class="kw">body</span><span class="ot"> style</span><span class="op">=</span><span class="st">&quot;...&quot;</span><span class="dt">&gt;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;</span><span class="kw">main</span><span class="ot"> style</span><span class="op">=</span><span class="st">&quot;...&quot;</span><span class="dt">&gt;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&lt;</span><span class="kw">pre</span><span class="ot"> style</span><span class="op">=</span><span class="st">&quot;...&quot;</span><span class="dt">&gt;</span>escaped original Markdown<span class="dt">&lt;/</span><span class="kw">pre</span><span class="dt">&gt;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&lt;/</span><span class="kw">main</span><span class="dt">&gt;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&lt;/</span><span class="kw">body</span><span class="dt">&gt;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">html</span><span class="dt">&gt;</span></span></code></pre></div>
+<p>After this milestone, the inner <code>&lt;pre&gt;</code> should be replaced by rendered HTML from Sätteri, wrapped by the same simple shell.</p>
+<h2 id="chosen-implementation-strategy">Chosen implementation strategy</h2>
+<p>Add one focused Markdown module:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>src/markdown.ts</span></code></pre></div>
+<p>Responsibilities:</p>
+<ul>
+<li>Map <code>Config.markdown</code> to Sätteri <code>features</code>.</li>
+<li>Call <code>markdownToHtml</code>.</li>
+<li>Enforce current <code>rawHtml</code> behavior by adding a tiny MDAST plugin when <code>rawHtml</code> is <code>false</code>.</li>
+<li>Return a small result object:</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">interface</span> RenderedMarkdown {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  html<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  frontmatter<span class="op">:</span> Frontmatter <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">async</span> <span class="kw">function</span> <span class="fu">renderMarkdown</span>(markdown<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> config<span class="op">:</span> Config)<span class="op">:</span> <span class="bu">Promise</span><span class="op">&lt;</span>RenderedMarkdown<span class="op">&gt;;</span></span></code></pre></div>
+<p>Implementation note: always return a Promise and have the CLI use <code>await renderMarkdown(...)</code> so future async plugin support does not require CLI changes.</p>
+<p>Rationale:</p>
+<ul>
+<li>Keeps Sätteri-specific imports and behavior out of <code>src/cli.ts</code>.</li>
+<li>Avoids premature directory structure such as <code>src/markdown/satteri.ts</code> until the renderer grows.</li>
+<li>Makes feature mapping and raw HTML behavior easy to unit test.</li>
+<li>Keeps the CLI responsible for I/O and wrapper generation only.</li>
+</ul>
+<h2 id="alternatives-considered">Alternatives considered</h2>
+<h3 id="put-sätteri-directly-in-srccli.ts">1. Put Sätteri directly in <code>src/cli.ts</code></h3>
+<p>Rejected. It is the smallest possible change, but mixes CLI flow, file I/O, wrapper rendering, and Markdown engine details. A single <code>src/markdown.ts</code> module is still simple and improves testability.</p>
+<h3 id="use-markdowntohast-immediately-with-a-custom-serializer">2. Use <code>markdownToHast</code> immediately with a custom serializer</h3>
+<p>Rejected for this smoke step. It is the likely long-term direction for deterministic email HTML, but it expands scope into serializer design, allowed tags, attributes, styling, and sanitization. This milestone should first validate Sätteri integration and config mapping.</p>
+<h3 id="add-sanitizerallowlist-now">3. Add sanitizer/allowlist now</h3>
+<p>Rejected. Important but too large for this milestone. It should be a dedicated next milestone after we know Sätteri output shape.</p>
+<h3 id="ignore-markdown.rawhtml-until-sanitizer-phase">4. Ignore <code>markdown.rawHtml</code> until sanitizer phase</h3>
+<p>Rejected. The config field already exists and raw HTML pass-through is a material safety issue. A small MDAST plugin can make <code>raw_html = false</code> observable now by escaping raw HTML.</p>
+<h3 id="remove-raw-html-instead-of-escaping-it">5. Remove raw HTML instead of escaping it</h3>
+<p>Rejected for this milestone. Escaping preserves user content visibly and is easy to test. Later diagnostics/strict mode can offer remove/fail behavior.</p>
+<h2 id="implementation-tasks">Implementation tasks</h2>
+<h3 id="pre-flight-sätteri-compile-spike">0. Pre-flight Sätteri compile spike</h3>
+<p>Before changing source, run a tiny Sätteri compile smoke test because Sätteri uses native bindings and standalone Bun executable packaging may fail.</p>
+<p>Suggested command:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> <span class="at">-e</span> <span class="st">&#39;import { markdownToHtml } from &quot;satteri&quot;; console.log(markdownToHtml(&quot;# Hi&quot;).html)&#39;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run compile</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ex">./dist/mdtoemail</span> <span class="at">--version</span></span></code></pre></div>
+<p>After implementation, repeat compiled binary conversion with real Sätteri output.</p>
+<p>If <code>bun run compile</code> or the compiled binary fails because of Sätteri native binding packaging, stop and investigate Bun/Sätteri packaging behavior before proceeding. This may affect whether standalone binaries stay a supported build target.</p>
+<h3 id="add-srcmarkdown.ts">1. Add <code>src/markdown.ts</code></h3>
+<p>Implement:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { defineMdastPlugin<span class="op">,</span> markdownToHtml<span class="op">,</span> <span class="kw">type</span> Features<span class="op">,</span> <span class="kw">type</span> Frontmatter } <span class="im">from</span> <span class="st">&quot;satteri&quot;</span><span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="im">type</span> { Config } <span class="im">from</span> <span class="st">&quot;./config&quot;</span><span class="op">;</span></span></code></pre></div>
+<p>Add:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">interface</span> RenderedMarkdown {</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  html<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  frontmatter<span class="op">:</span> Frontmatter <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">function</span> <span class="fu">markdownFeatures</span>(config<span class="op">:</span> Config)<span class="op">:</span> Features {</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> {</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    gfm<span class="op">:</span> config<span class="op">.</span><span class="at">markdown</span><span class="op">.</span><span class="at">gfm</span><span class="op">,</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    frontmatter<span class="op">:</span> config<span class="op">.</span><span class="at">markdown</span><span class="op">.</span><span class="at">frontmatter</span><span class="op">,</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Add a raw HTML escaping plugin:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> escapeRawHtml <span class="op">=</span> <span class="fu">defineMdastPlugin</span>({</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  name<span class="op">:</span> <span class="st">&quot;escape-raw-html&quot;</span><span class="op">,</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">html</span>(node) {</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> { type<span class="op">:</span> <span class="st">&quot;text&quot;</span><span class="op">,</span> value<span class="op">:</span> node<span class="op">.</span><span class="at">value</span> }<span class="op">;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Then:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">async</span> <span class="kw">function</span> <span class="fu">renderMarkdown</span>(markdown<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> config<span class="op">:</span> Config)<span class="op">:</span> <span class="bu">Promise</span><span class="op">&lt;</span>RenderedMarkdown<span class="op">&gt;</span> {</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> result <span class="op">=</span> <span class="cf">await</span> <span class="fu">markdownToHtml</span>(markdown<span class="op">,</span> {</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    features<span class="op">:</span> <span class="fu">markdownFeatures</span>(config)<span class="op">,</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    mdastPlugins<span class="op">:</span> config<span class="op">.</span><span class="at">markdown</span><span class="op">.</span><span class="at">rawHtml</span> <span class="op">?</span> [] <span class="op">:</span> [escapeRawHtml]<span class="op">,</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> {</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    html<span class="op">:</span> result<span class="op">.</span><span class="at">html</span><span class="op">,</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    frontmatter<span class="op">:</span> result<span class="op">.</span><span class="at">frontmatter</span><span class="op">,</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Notes:</p>
+<ul>
+<li>Use <code>await</code> even though current plugin is sync because Sätteri return type can become Promise when async plugins are introduced.</li>
+<li>Keep <code>rawHtml</code> out of <code>features</code> because Sätteri does not expose it as a feature flag.</li>
+<li>Keep <code>frontmatter</code> returned but do not render it yet.</li>
+<li>This only escapes raw HTML source nodes; it does not sanitize URLs or generated HTML.</li>
+</ul>
+<h3 id="update-srccli.ts">2. Update <code>src/cli.ts</code></h3>
+<p>Replace:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> html <span class="op">=</span> <span class="fu">renderPlaceholderHtml</span>(markdown<span class="op">,</span> input<span class="op">,</span> config)<span class="op">;</span></span></code></pre></div>
+<p>With:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> renderedHtml<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span> {</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> rendered <span class="op">=</span> <span class="cf">await</span> <span class="fu">renderMarkdown</span>(markdown<span class="op">,</span> config)<span class="op">;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  renderedHtml <span class="op">=</span> rendered<span class="op">.</span><span class="at">html</span><span class="op">;</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>} <span class="cf">catch</span> (error) {</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">Error</span>(<span class="vs">`Could not render Markdown. </span><span class="sc">${</span><span class="fu">messageFrom</span>(error)<span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> html <span class="op">=</span> <span class="fu">renderHtmlDocument</span>(renderedHtml<span class="op">,</span> input<span class="op">,</span> config)<span class="op">;</span></span></code></pre></div>
+<p>Rename <code>renderPlaceholderHtml</code> to something less misleading, e.g.:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">renderHtmlDocument</span>(contentHtml<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> input<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> config<span class="op">:</span> Config)<span class="op">:</span> <span class="dt">string</span></span></code></pre></div>
+<p>This is safe because <code>renderPlaceholderHtml</code> is a non-exported local function; existing tests only import <code>deriveOutputPath</code>.</p>
+<p>Remove the <code>&lt;pre&gt;</code> placeholder and insert rendered HTML directly:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">main</span><span class="ot"> style</span><span class="op">=</span><span class="st">&quot;...&quot;</span><span class="dt">&gt;</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  ${contentHtml}</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">main</span><span class="dt">&gt;</span></span></code></pre></div>
+<p>Keep the current wrapper and style tokens as-is.</p>
+<p>Do not yet inline element-specific styles for headings, paragraphs, links, lists, etc. That belongs to the next email-rendering milestone. Note that <code>theme.linkColor</code> will not affect generated <code>&lt;a&gt;</code> tags until that later milestone.</p>
+<h3 id="add-markdown-tests">3. Add Markdown tests</h3>
+<p>Create:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>test/markdown.test.ts</span></code></pre></div>
+<p>Use <code>bun:test</code> to cover:</p>
+<ol type="1">
+<li>CommonMark basics:
+<ul>
+<li>input: <code># Hello\n\nThis is **bold** and *emphasized*.</code></li>
+<li>expect heading, paragraph, <code>&lt;strong&gt;</code>, <code>&lt;em&gt;</code>.</li>
+</ul></li>
+<li>Links:
+<ul>
+<li><code>[Site](https://example.com)</code> renders <code>&lt;a href="https://example.com"&gt;Site&lt;/a&gt;</code>.</li>
+</ul></li>
+<li>GFM table when enabled:
+<ul>
+<li>with default config, table renders <code>&lt;table&gt;</code> and cells.</li>
+</ul></li>
+<li>GFM table when disabled:
+<ul>
+<li>with <code>gfm: false</code>, the same table should not render as a <code>&lt;table&gt;</code>.</li>
+<li>Do not over-specify exact fallback output; assert absence of <code>&lt;table&gt;</code> and only stable text if needed.</li>
+</ul></li>
+<li>Task lists smoke:
+<ul>
+<li>with <code>gfm: true</code>, task list currently includes checkbox input output.</li>
+<li>This documents current Sätteri output and highlights why the next milestone must sanitize/render email-safe equivalents.</li>
+<li>This test is documentation-oriented; keep it concise.</li>
+</ul></li>
+<li>Frontmatter:
+<ul>
+<li>with <code>frontmatter: true</code>, <code>renderMarkdown</code> returns <code>{ kind, value }</code> and output excludes the frontmatter block.</li>
+<li>with <code>frontmatter: false</code>, frontmatter delimiters should be treated as normal Markdown; assert based on actual inspected output without over-specifying.</li>
+</ul></li>
+<li>Raw HTML disabled by default:
+<ul>
+<li><code>&lt;script&gt;alert(1)&lt;/script&gt;</code> or <code>&lt;em&gt;x&lt;/em&gt;</code> should not pass through as HTML.</li>
+<li>Assert escaped output contains <code>&amp;lt;script&amp;gt;</code> / <code>&amp;lt;em&amp;gt;</code>.</li>
+<li>Avoid exact full-output assertions for block-level raw HTML, since root-level text may not be paragraph-wrapped.</li>
+</ul></li>
+<li>Raw HTML enabled:
+<ul>
+<li>with <code>rawHtml: true</code>, <code>&lt;em&gt;x&lt;/em&gt;</code> should pass through.</li>
+</ul></li>
+<li>Known sanitizer gap:
+<ul>
+<li><code>[bad](javascript:alert(1))</code> currently renders an unsafe <code>href</code>.</li>
+<li>Document this with a concise test or comment so the next milestone has an explicit target.</li>
+<li>This is not approval of the behavior; it records the smoke integration limitation.</li>
+</ul></li>
+</ol>
+<p>Prefer exact small string assertions over large snapshots in this milestone. Add snapshots later when the email renderer stabilizes.</p>
+<h3 id="add-minimal-cli-integration-test-if-it-stays-simple">4. Add minimal CLI integration test if it stays simple</h3>
+<p>Optional but recommended if not too noisy:</p>
+<ul>
+<li>Add <code>test/cli.test.ts</code> using <code>Bun.spawn</code> or <code>$</code> to run <code>bun run src/cli.ts</code> against a temp Markdown file.</li>
+<li>Assert output file contains rendered <code>&lt;h1&gt;Hello&lt;/h1&gt;</code> and no placeholder <code>&lt;pre&gt;</code>.</li>
+</ul>
+<p>If this becomes verbose, skip for now and rely on manual CLI verification plus <code>markdown.test.ts</code>.</p>
+<h3 id="manual-verification">5. Manual verification</h3>
+<p>Run:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="bu">printf</span> <span class="st">&#39;# Hello\n\nThis is **bold**.&#39;</span> <span class="op">&gt;</span> /tmp/mdtoemail-satteri.md</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts /tmp/mdtoemail-satteri.md <span class="at">-o</span> /tmp/mdtoemail-satteri.html</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> /tmp/mdtoemail-satteri.html</span></code></pre></div>
+<p>Expected:</p>
+<ul>
+<li>output contains <code>&lt;h1&gt;Hello&lt;/h1&gt;</code></li>
+<li>output contains <code>&lt;strong&gt;bold&lt;/strong&gt;</code></li>
+<li>output does not wrap source Markdown in <code>&lt;pre&gt;</code></li>
+</ul>
+<p>Raw HTML config checks:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="bu">printf</span> <span class="st">&#39;&lt;em&gt;Hello&lt;/em&gt;&#39;</span> <span class="op">&gt;</span> /tmp/mdtoemail-raw.md</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts /tmp/mdtoemail-raw.md <span class="at">-o</span> /tmp/mdtoemail-raw-default.html</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> /tmp/mdtoemail-raw-default.html</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> <span class="op">&gt;</span> /tmp/mdtoemail-raw.toml <span class="op">&lt;&lt;&#39;TOML&#39;</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="st">[markdown]</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="st">raw_html = true</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="op">TOML</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts /tmp/mdtoemail-raw.md <span class="at">--config</span> /tmp/mdtoemail-raw.toml <span class="at">-o</span> /tmp/mdtoemail-raw-enabled.html</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span> /tmp/mdtoemail-raw-enabled.html</span></code></pre></div>
+<p>Expected:</p>
+<ul>
+<li>default output escapes <code>&lt;em&gt;</code>.</li>
+<li>configured output includes <code>&lt;em&gt;Hello&lt;/em&gt;</code>.</li>
+</ul>
+<p>Compiled binary verification:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run compile</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="ex">./dist/mdtoemail</span> /tmp/mdtoemail-satteri.md <span class="at">-o</span> /tmp/mdtoemail-satteri-compiled.html</span></code></pre></div>
+<p>Expected:</p>
+<ul>
+<li>compiled binary still works with Sätteri.</li>
+<li>If compilation fails because of Sätteri native packaging, do not work around blindly. Investigate Bun/Sätteri docs and decide whether compiled binaries should be deferred or the build config adjusted.</li>
+</ul>
+<h2 id="files-likely-to-change">Files likely to change</h2>
+<div class="sourceCode" id="cb17"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>src/cli.ts</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>src/markdown.ts</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>test/markdown.test.ts</span></code></pre></div>
+<p>Possible optional file:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>test/cli.test.ts</span></code></pre></div>
+<p>No config schema changes are expected.</p>
+<h2 id="interface-changes">Interface changes</h2>
+<p>No CLI option changes.</p>
+<p>Behavior change:</p>
+<ul>
+<li>Output now contains rendered Markdown HTML instead of escaped source Markdown in <code>&lt;pre&gt;</code>.</li>
+<li><code>markdown.gfm</code> and <code>markdown.frontmatter</code> now affect conversion.</li>
+<li><code>markdown.raw_html = false</code> now escapes raw HTML nodes before rendering.</li>
+<li><code>markdown.raw_html = true</code> allows Sätteri raw HTML pass-through.</li>
+</ul>
+<h2 id="testing-and-verification-plan">Testing and verification plan</h2>
+<p>Automated:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> test</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run typecheck</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run build</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run compile</span></code></pre></div>
+<p>Manual:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts <span class="at">--help</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts <span class="at">--version</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="bu">printf</span> <span class="st">&#39;# Hello\n\nThis is **bold**.&#39;</span> <span class="op">&gt;</span> /tmp/mdtoemail-satteri.md</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts /tmp/mdtoemail-satteri.md <span class="at">-o</span> /tmp/mdtoemail-satteri.html</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="fu">grep</span> <span class="st">&#39;&lt;h1&gt;Hello&lt;/h1&gt;&#39;</span> /tmp/mdtoemail-satteri.html</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="fu">grep</span> <span class="st">&#39;&lt;strong&gt;bold&lt;/strong&gt;&#39;</span> /tmp/mdtoemail-satteri.html</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="ex">./dist/mdtoemail</span> /tmp/mdtoemail-satteri.md <span class="at">-o</span> /tmp/mdtoemail-satteri-compiled.html</span></code></pre></div>
+<p>Error cases to re-check:</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts <span class="at">--unknown</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts /tmp/missing.md</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts /tmp/mdtoemail-satteri.md <span class="at">--config</span> /tmp/missing.toml</span></code></pre></div>
+<h2 id="risks-edge-cases-and-mitigations">Risks, edge cases, and mitigations</h2>
+<h3 id="raw-html-handling-is-not-final-sanitization">Raw HTML handling is not final sanitization</h3>
+<p>Risk: Escaping MDAST <code>html</code> nodes helps for raw Markdown HTML, but it does not sanitize all unsafe final HTML generated by Markdown constructs or future plugins.</p>
+<p>Concrete example: <code>[bad](javascript:alert(1))</code> may render an unsafe <code>&lt;a href="javascript:alert(1)"&gt;bad&lt;/a&gt;</code> until URL validation is implemented.</p>
+<p>Mitigation: Clearly document this as smoke behavior. Add a known-gap test/comment. Next milestone should implement sanitizer/email renderer.</p>
+<h3 id="gfm-task-lists-emit-input-elements">GFM task lists emit <code>&lt;input&gt;</code> elements</h3>
+<p>Risk: Sätteri emits checkbox inputs for task lists, which are poor email markup and likely unsupported/sanitized by clients.</p>
+<p>Mitigation: Add a test documenting current behavior. Next milestone should replace task list inputs with email-safe text or styled symbols.</p>
+<h3 id="theme.linkcolor-is-not-yet-applied-to-generated-links"><code>theme.linkColor</code> is not yet applied to generated links</h3>
+<p>Risk: Users may expect <code>link_color</code> to affect links once links render as <code>&lt;a&gt;</code> tags.</p>
+<p>Mitigation: Call this out as a known limitation. Link styling belongs to the next email renderer/inline style milestone.</p>
+<h3 id="raw_html-true-can-generate-unsafe-html"><code>raw_html = true</code> can generate unsafe HTML</h3>
+<p>Risk: Allowing raw HTML pass-through can output scripts/forms/iframes.</p>
+<p>Mitigation: Keep default <code>false</code>. Treat <code>true</code> as an explicit unsafe escape hatch until sanitizer exists. Revisit once diagnostics/strict mode are added.</p>
+<h3 id="sätteri-native-dependency-and-bun-build---compile">Sätteri native dependency and <code>bun build --compile</code></h3>
+<p>Risk: Sätteri native napi bindings may not package cleanly in Bun standalone executables.</p>
+<p>Mitigation: Run the compile spike first and repeat compiled binary verification after implementation. If it fails, investigate instead of adding hacks.</p>
+<h3 id="direct-html-insertion-into-wrapper">Direct HTML insertion into wrapper</h3>
+<p>Risk: <code>contentHtml</code> is intentionally inserted without escaping. This is correct for rendered Markdown but can propagate unsafe HTML when <code>raw_html = true</code> or unsafe URLs are generated.</p>
+<p>Mitigation: Keep raw HTML disabled by default. Sanitizer is next.</p>
+<h3 id="frontmatter-behavior-may-surprise-users">Frontmatter behavior may surprise users</h3>
+<p>Risk: With frontmatter enabled, Sätteri removes frontmatter from output and returns it separately. The CLI currently does nothing with returned frontmatter.</p>
+<p>Mitigation: Test this behavior and document it as a current limitation. Future plan can use frontmatter for title/metadata if desired.</p>
+<h2 id="rolloutbackward-compatibility">Rollout/backward compatibility</h2>
+<ul>
+<li>This intentionally changes output from placeholder debug HTML to rendered Markdown HTML.</li>
+<li>No CLI flags or config keys change.</li>
+<li>Existing config files remain valid.</li>
+<li>Unknown config keys remain ignored.</li>
+</ul>
+<h2 id="claude-review-notes-incorporated">Claude review notes incorporated</h2>
+<p>The draft plan was reviewed with the Claude CLI. Useful feedback incorporated:</p>
+<ul>
+<li>Verified Sätteri API assumptions against installed type declarations.</li>
+<li>Corrected wording: frontmatter is extracted as raw text, not parsed into structured data.</li>
+<li>Moved Sätteri/Bun standalone compile risk to a pre-flight task.</li>
+<li>Made <code>renderMarkdown</code> consistently return <code>Promise&lt;RenderedMarkdown&gt;</code>.</li>
+<li>Added explicit render error wrapping in the CLI plan.</li>
+<li>Added explicit known sanitizer gap for unsafe generated URLs such as <code>javascript:</code> links.</li>
+<li>Called out <code>theme.linkColor</code> as currently inactive until element-level inline styling exists.</li>
+</ul>
+<h2 id="open-questions">Open questions</h2>
+<p>None for this milestone.</p>
+<h2 id="next-milestone-after-this">Next milestone after this</h2>
+<p>Email-safe rendering/sanitization:</p>
+<ol type="1">
+<li>Decide whether to continue with <code>markdownToHtml</code> plus HTML post-processing or switch to <code>markdownToHast</code> plus custom renderer.</li>
+<li>Add an allowlist for supported tags/attributes.</li>
+<li>Remove or transform unsupported elements such as <code>input</code>, <code>script</code>, <code>style</code>, <code>iframe</code>, <code>form</code>.</li>
+<li>Validate link/image protocols.</li>
+<li>Add element-level inline styles.</li>
+<li>Add a conservative table-based outer email wrapper.</li>
+<li>Add diagnostics/warnings for unsafe or problematic content.</li>
+</ol>
+</article>
+  <script>
+(() => {
+  function normalizePreviewAnnotationLabel(text) {
+    return String(text || "")
+      .replace(/\r\n/g, "\n")
+      .replace(/\s*\n\s*/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+
+  function advancePastBacktickSpan(source, startIndex) {
+    let fenceLength = 1;
+    while (source[startIndex + fenceLength] === "`") fenceLength += 1;
+
+    let index = startIndex + fenceLength;
+    while (index < source.length) {
+      const ch = source[index];
+      if (ch === "\\") {
+        index = Math.min(source.length, index + 2);
+        continue;
+      }
+      if (ch === "`") {
+        let runLength = 1;
+        while (source[index + runLength] === "`") runLength += 1;
+        if (runLength === fenceLength) {
+          return index + runLength;
+        }
+        index += runLength;
+        continue;
+      }
+      if (ch === "\n") {
+        return index + 1;
+      }
+      index += 1;
+    }
+
+    return source.length;
+  }
+
+  function readInlineAnnotationMarkerAt(source, startIndex) {
+    const text = String(source || "");
+    if (startIndex < 0 || startIndex + 4 > text.length) return null;
+    if (text[startIndex] !== "[" || text.slice(startIndex, startIndex + 4).toLowerCase() !== "[an:") {
+      return null;
+    }
+
+    let index = startIndex + 4;
+    while (index < text.length && /\s/.test(text[index])) index += 1;
+    const bodyStart = index;
+    let squareDepth = 0;
+
+    while (index < text.length) {
+      const ch = text[index];
+      if (ch === "\\") {
+        index = Math.min(text.length, index + 2);
+        continue;
+      }
+      if (ch === "`") {
+        index = advancePastBacktickSpan(text, index);
+        continue;
+      }
+      if (ch === "[") {
+        squareDepth += 1;
+        index += 1;
+        continue;
+      }
+      if (ch === "]") {
+        if (squareDepth === 0) {
+          const end = index + 1;
+          return {
+            start: startIndex,
+            end: end,
+            raw: text.slice(startIndex, end),
+            body: text.slice(bodyStart, index),
+          };
+        }
+        squareDepth -= 1;
+        index += 1;
+        continue;
+      }
+      index += 1;
+    }
+
+    return null;
+  }
+
+  function collectInlineAnnotationMarkers(text) {
+    const source = String(text || "");
+    const markers = [];
+    let index = 0;
+
+    while (index < source.length) {
+      const ch = source[index];
+      if (ch === "\\") {
+        index = Math.min(source.length, index + 2);
+        continue;
+      }
+      if (ch === "`") {
+        index = advancePastBacktickSpan(source, index);
+        continue;
+      }
+      if (ch === "[" && source.slice(index, index + 4).toLowerCase() === "[an:") {
+        const marker = readInlineAnnotationMarkerAt(source, index);
+        if (marker) {
+          markers.push(marker);
+          index = marker.end;
+          continue;
+        }
+      }
+      index += 1;
+    }
+
+    return markers;
+  }
+
+  function replaceInlineAnnotationMarkers(text, annotationReplacer, textReplacer) {
+    const source = String(text || "");
+    const markers = collectInlineAnnotationMarkers(source);
+    const replaceAnnotation = typeof annotationReplacer === "function"
+      ? annotationReplacer
+      : function(marker) { return marker.raw; };
+    const replaceText = typeof textReplacer === "function"
+      ? textReplacer
+      : function(segment) { return segment; };
+
+    if (markers.length === 0) {
+      return replaceText(source);
+    }
+
+    let out = "";
+    let lastIndex = 0;
+    markers.forEach(function(marker) {
+      if (marker.start > lastIndex) {
+        out += String(replaceText(source.slice(lastIndex, marker.start)) ?? "");
+      }
+      out += String(replaceAnnotation(marker) ?? "");
+      lastIndex = marker.end;
+    });
+    if (lastIndex < source.length) {
+      out += String(replaceText(source.slice(lastIndex)) ?? "");
+    }
+    return out;
+  }
+
+  function escapeHtml(text) {
+    return String(text || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function isWordChar(ch) {
+    return typeof ch === "string" && /[A-Za-z0-9]/.test(ch);
+  }
+
+  function readInlineMarkdownLinkAt(source, startIndex) {
+    const text = String(source || "");
+    if (text[startIndex] !== "[") return null;
+
+    let index = startIndex + 1;
+    let squareDepth = 0;
+    while (index < text.length) {
+      const ch = text[index];
+      if (ch === "\\") {
+        index = Math.min(text.length, index + 2);
+        continue;
+      }
+      if (ch === "`") {
+        index = advancePastBacktickSpan(text, index);
+        continue;
+      }
+      if (ch === "[") {
+        squareDepth += 1;
+        index += 1;
+        continue;
+      }
+      if (ch === "]") {
+        if (squareDepth === 0) break;
+        squareDepth -= 1;
+        index += 1;
+        continue;
+      }
+      if (ch === "\n") return null;
+      index += 1;
+    }
+
+    if (index >= text.length || text[index] !== "]" || text[index + 1] !== "(") return null;
+
+    index += 2;
+    let parenDepth = 0;
+    while (index < text.length) {
+      const ch = text[index];
+      if (ch === "\\") {
+        index = Math.min(text.length, index + 2);
+        continue;
+      }
+      if (ch === "`") {
+        index = advancePastBacktickSpan(text, index);
+        continue;
+      }
+      if (ch === "(") {
+        parenDepth += 1;
+        index += 1;
+        continue;
+      }
+      if (ch === ")") {
+        if (parenDepth === 0) {
+          return {
+            type: "literal",
+            raw: text.slice(startIndex, index + 1),
+            end: index + 1,
+          };
+        }
+        parenDepth -= 1;
+        index += 1;
+        continue;
+      }
+      if (ch === "\n") return null;
+      index += 1;
+    }
+
+    return null;
+  }
+
+  function readDelimitedPreviewTokenAt(source, startIndex, open, close, allowNewlines) {
+    const text = String(source || "");
+    if (text.slice(startIndex, startIndex + open.length) !== open) return null;
+
+    let index = startIndex + open.length;
+    while (index < text.length) {
+      const ch = text[index];
+      if (!allowNewlines && ch === "\n") return null;
+      if (ch === "\\") {
+        index = Math.min(text.length, index + 2);
+        continue;
+      }
+      if (text.slice(index, index + close.length) === close) {
+        return {
+          type: "math",
+          raw: text.slice(startIndex, index + close.length),
+          end: index + close.length,
+        };
+      }
+      index += 1;
+    }
+
+    return null;
+  }
+
+  function readInlineMathTokenAt(source, startIndex) {
+    const text = String(source || "");
+    if (text[startIndex] === "\\" && text[startIndex + 1] === "(") {
+      return readDelimitedPreviewTokenAt(text, startIndex, "\\(", "\\)", true);
+    }
+    if (text[startIndex] === "\\" && text[startIndex + 1] === "[") {
+      return readDelimitedPreviewTokenAt(text, startIndex, "\\[", "\\]", true);
+    }
+    if (text[startIndex] === "$" && text[startIndex + 1] === "$") {
+      return readDelimitedPreviewTokenAt(text, startIndex, "$$", "$$", true);
+    }
+    if (text[startIndex] === "$" && text[startIndex + 1] !== "$" && text[startIndex + 1] && !/\s/.test(text[startIndex + 1])) {
+      const token = readDelimitedPreviewTokenAt(text, startIndex, "$", "$", false);
+      if (token && token.raw.length > 2) return token;
+    }
+    return null;
+  }
+
+  function readBareUrlTokenAt(source, startIndex) {
+    const text = String(source || "").slice(startIndex);
+    const match = text.match(/^https?:\/\/[^\s<]+/i);
+    if (!match) return null;
+    return {
+      type: "literal",
+      raw: match[0],
+      end: startIndex + match[0].length,
+    };
+  }
+
+  function readAnnotationPreviewProtectedTokenAt(source, startIndex) {
+    const text = String(source || "");
+    if (startIndex < 0 || startIndex >= text.length) return null;
+
+    if (text[startIndex] === "`") {
+      const end = advancePastBacktickSpan(text, startIndex);
+      return {
+        type: "code",
+        raw: text.slice(startIndex, end),
+        end: end,
+      };
+    }
+
+    const linkToken = text[startIndex] === "["
+      ? readInlineMarkdownLinkAt(text, startIndex)
+      : null;
+    if (linkToken) return linkToken;
+
+    const mathToken = (text[startIndex] === "$" || text[startIndex] === "\\")
+      ? readInlineMathTokenAt(text, startIndex)
+      : null;
+    if (mathToken) return mathToken;
+
+    const urlToken = text[startIndex].toLowerCase() === "h"
+      ? readBareUrlTokenAt(text, startIndex)
+      : null;
+    if (urlToken) return urlToken;
+
+    return null;
+  }
+
+  function canOpenEmphasisDelimiter(source, startIndex, delimiter) {
+    const text = String(source || "");
+    if (text.slice(startIndex, startIndex + delimiter.length) !== delimiter) return false;
+    const prev = startIndex > 0 ? text[startIndex - 1] : "";
+    const next = text[startIndex + delimiter.length] || "";
+    if (!next || /\s/.test(next)) return false;
+    return !isWordChar(prev);
+  }
+
+  function canCloseEmphasisDelimiter(source, startIndex, delimiter) {
+    const text = String(source || "");
+    if (text.slice(startIndex, startIndex + delimiter.length) !== delimiter) return false;
+    const prev = startIndex > 0 ? text[startIndex - 1] : "";
+    const next = text[startIndex + delimiter.length] || "";
+    if (!prev || /\s/.test(prev)) return false;
+    return !isWordChar(next);
+  }
+
+  function readAnnotationEmphasisSpanAt(source, startIndex, delimiter, tagName) {
+    const text = String(source || "");
+    if (!canOpenEmphasisDelimiter(text, startIndex, delimiter)) return null;
+
+    let index = startIndex + delimiter.length;
+    while (index < text.length) {
+      if (text[index] === "\\") {
+        index = Math.min(text.length, index + 2);
+        continue;
+      }
+
+      const protectedToken = readAnnotationPreviewProtectedTokenAt(text, index);
+      if (protectedToken) {
+        index = protectedToken.end;
+        continue;
+      }
+
+      if (canCloseEmphasisDelimiter(text, index, delimiter)) {
+        const inner = text.slice(startIndex + delimiter.length, index);
+        return {
+          end: index + delimiter.length,
+          html: "<" + tagName + ">" + renderAnnotationPlainTextHtml(inner) + "</" + tagName + ">",
+        };
+      }
+
+      index += 1;
+    }
+
+    return null;
+  }
+
+  function renderAnnotationCodeSpanHtml(rawToken) {
+    const raw = String(rawToken || "");
+    if (!raw || raw[0] !== "`") return escapeHtml(raw);
+
+    let fenceLength = 1;
+    while (raw[fenceLength] === "`") fenceLength += 1;
+    const fence = "`".repeat(fenceLength);
+    if (raw.length < fenceLength * 2 || raw.slice(raw.length - fenceLength) !== fence) {
+      return escapeHtml(raw);
+    }
+
+    return "<code>" + escapeHtml(raw.slice(fenceLength, raw.length - fenceLength)) + "</code>";
+  }
+
+  function renderAnnotationPlainTextHtml(text) {
+    const source = String(text || "");
+    let out = "";
+    let index = 0;
+
+    while (index < source.length) {
+      const strongMatch = readAnnotationEmphasisSpanAt(source, index, "**", "strong")
+        || readAnnotationEmphasisSpanAt(source, index, "__", "strong");
+      if (strongMatch) {
+        out += strongMatch.html;
+        index = strongMatch.end;
+        continue;
+      }
+
+      const emphasisMatch = readAnnotationEmphasisSpanAt(source, index, "*", "em")
+        || readAnnotationEmphasisSpanAt(source, index, "_", "em");
+      if (emphasisMatch) {
+        out += emphasisMatch.html;
+        index = emphasisMatch.end;
+        continue;
+      }
+
+      out += escapeHtml(source[index]);
+      index += 1;
+    }
+
+    return out;
+  }
+
+  function renderPreviewAnnotationHtml(text) {
+    const source = normalizePreviewAnnotationLabel(text);
+    let out = "";
+    let plainStart = 0;
+    let index = 0;
+
+    while (index < source.length) {
+      const token = readAnnotationPreviewProtectedTokenAt(source, index);
+      if (!token) {
+        index += 1;
+        continue;
+      }
+
+      if (index > plainStart) {
+        out += renderAnnotationPlainTextHtml(source.slice(plainStart, index));
+      }
+
+      if (token.type === "code") {
+        out += renderAnnotationCodeSpanHtml(token.raw);
+      } else {
+        out += escapeHtml(token.raw);
+      }
+
+      index = token.end;
+      plainStart = index;
+    }
+
+    if (plainStart < source.length) {
+      out += renderAnnotationPlainTextHtml(source.slice(plainStart));
+    }
+
+    return out;
+  }
+
+  function transformMarkdownOutsideFences(text, plainTransformer) {
+    const source = String(text || "").replace(/\r\n/g, "\n");
+    if (!source) return source;
+
+    const transformPlain = typeof plainTransformer === "function"
+      ? plainTransformer
+      : function(segment) { return segment; };
+    const lines = source.split("\n");
+    const out = [];
+    let plainBuffer = [];
+    let inFence = false;
+    let fenceChar = null;
+    let fenceLength = 0;
+
+    function flushPlain() {
+      if (plainBuffer.length === 0) return;
+      const transformed = transformPlain(plainBuffer.join("\n"));
+      out.push(typeof transformed === "string" ? transformed : String(transformed ?? ""));
+      plainBuffer = [];
+    }
+
+    lines.forEach(function(line) {
+      const trimmed = line.trimStart();
+      const fenceMatch = trimmed.match(/^(`{3,}|~{3,})/);
+      if (fenceMatch) {
+        const marker = fenceMatch[1] || "";
+        const markerChar = marker.charAt(0);
+        const markerLength = marker.length;
+
+        if (!inFence) {
+          flushPlain();
+          inFence = true;
+          fenceChar = markerChar;
+          fenceLength = markerLength;
+          out.push(line);
+          return;
+        }
+
+        if (fenceChar === markerChar && markerLength >= fenceLength) {
+          inFence = false;
+          fenceChar = null;
+          fenceLength = 0;
+        }
+
+        out.push(line);
+        return;
+      }
+
+      if (inFence) {
+        out.push(line);
+      } else {
+        plainBuffer.push(line);
+      }
+    });
+
+    flushPlain();
+    return out.join("\n");
+  }
+
+  function hasAnnotationMarkers(text) {
+    let found = false;
+    transformMarkdownOutsideFences(text, function(segment) {
+      if (!found && collectInlineAnnotationMarkers(segment).length > 0) {
+        found = true;
+      }
+      return segment;
+    });
+    return found;
+  }
+
+  function stripAnnotationMarkers(text) {
+    return transformMarkdownOutsideFences(text, function(segment) {
+      return replaceInlineAnnotationMarkers(segment, function() { return ""; });
+    });
+  }
+
+  function prepareMarkdownForPandocPreview(markdown, placeholderPrefix) {
+    const placeholders = [];
+    const prefix = typeof placeholderPrefix === "string" && placeholderPrefix
+      ? placeholderPrefix
+      : "PIMDANNOT";
+    const prepared = transformMarkdownOutsideFences(markdown, function(segment) {
+      return replaceInlineAnnotationMarkers(segment, function(marker) {
+        const label = normalizePreviewAnnotationLabel(marker.body);
+        if (!label) return "";
+        const token = prefix + placeholders.length + "TOKEN";
+        placeholders.push({ token: token, text: label, title: "[an: " + label + "]" });
+        return token;
+      });
+    });
+    return { markdown: prepared, placeholders: placeholders };
+  }
+
+  const helpers = Object.freeze({
+    collectInlineAnnotationMarkers: collectInlineAnnotationMarkers,
+    hasAnnotationMarkers: hasAnnotationMarkers,
+    normalizePreviewAnnotationLabel: normalizePreviewAnnotationLabel,
+    prepareMarkdownForPandocPreview: prepareMarkdownForPandocPreview,
+    readInlineAnnotationMarkerAt: readInlineAnnotationMarkerAt,
+    renderPreviewAnnotationHtml: renderPreviewAnnotationHtml,
+    replaceInlineAnnotationMarkers: replaceInlineAnnotationMarkers,
+    stripAnnotationMarkers: stripAnnotationMarkers,
+    transformMarkdownOutsideFences: transformMarkdownOutsideFences,
+  });
+
+  globalThis.PiMarkdownPreviewAnnotationHelpers = helpers;
+})();
+
+  </script>
+  <script type="module">
+  (async () => {
+    const annotationHelpers = window.PiMarkdownPreviewAnnotationHelpers || null;
+    const previewAnnotationPlaceholders = [];
+    const DIFF_META_LINE_REGEX = /^(diff --git |index |new file mode |deleted file mode |similarity index |rename from |rename to |Binary files )/;
+
+    const escapeRegExp = (text) => {
+      const backslash = String.fromCharCode(92);
+      const specials = '.+*?^' + '$' + '{}|[]' + backslash;
+      return Array.from(String(text || '')).map((ch) => specials.includes(ch) ? backslash + ch : ch).join('');
+    };
+
+    const setAnnotationMarkerContent = (marker, text) => {
+      if (!(marker instanceof HTMLElement)) return;
+      const rendered = annotationHelpers && typeof annotationHelpers.renderPreviewAnnotationHtml === 'function'
+        ? annotationHelpers.renderPreviewAnnotationHtml(text)
+        : String(text || '');
+      marker.innerHTML = rendered;
+    };
+
+    const replaceAnnotationTextNode = (textNode) => {
+      if (!annotationHelpers || typeof annotationHelpers.collectInlineAnnotationMarkers !== 'function') return;
+      const text = typeof textNode.nodeValue === 'string' ? textNode.nodeValue : '';
+      if (!text || text.toLowerCase().indexOf('[an:') === -1) return;
+
+      const markers = annotationHelpers.collectInlineAnnotationMarkers(text);
+      if (!Array.isArray(markers) || markers.length === 0) return;
+
+      const fragment = document.createDocumentFragment();
+      let lastIndex = 0;
+      markers.forEach((markerInfo) => {
+        const token = markerInfo && typeof markerInfo.raw === 'string' ? markerInfo.raw : '';
+        const start = markerInfo && typeof markerInfo.start === 'number' ? markerInfo.start : lastIndex;
+        const end = markerInfo && typeof markerInfo.end === 'number' ? markerInfo.end : start;
+        if (start > lastIndex) {
+          fragment.appendChild(document.createTextNode(text.slice(lastIndex, start)));
+        }
+
+        const markerText = annotationHelpers && typeof annotationHelpers.normalizePreviewAnnotationLabel === 'function'
+          ? annotationHelpers.normalizePreviewAnnotationLabel(markerInfo.body)
+          : String(markerInfo && markerInfo.body || '').trim();
+        if (markerText) {
+          const markerEl = document.createElement('span');
+          markerEl.className = 'annotation-marker';
+          markerEl.title = token || markerText;
+          setAnnotationMarkerContent(markerEl, markerText);
+          fragment.appendChild(markerEl);
+        }
+
+        lastIndex = end;
+      });
+
+      if (lastIndex < text.length) {
+        fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+      }
+
+      if (textNode.parentNode) {
+        textNode.parentNode.replaceChild(fragment, textNode);
+      }
+    };
+
+    const applyPreviewAnnotationPlaceholders = (root) => {
+      if (!root || !Array.isArray(previewAnnotationPlaceholders) || previewAnnotationPlaceholders.length === 0) return;
+      const placeholderMap = new Map();
+      const placeholderTokens = [];
+      previewAnnotationPlaceholders.forEach((entry) => {
+        const token = entry && typeof entry.token === 'string' ? entry.token : '';
+        if (!token) return;
+        placeholderMap.set(token, entry);
+        placeholderTokens.push(token);
+      });
+      if (placeholderTokens.length === 0) return;
+
+      const placeholderPattern = new RegExp(placeholderTokens.map(escapeRegExp).join('|'), 'g');
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const textNodes = [];
+      let node = walker.nextNode();
+      while (node) {
+        const textNode = node;
+        const value = typeof textNode.nodeValue === 'string' ? textNode.nodeValue : '';
+        if (value && value.indexOf('PIMDPREVIEWANNOT') !== -1) {
+          const parent = textNode.parentElement;
+          const tag = parent && parent.tagName ? parent.tagName.toUpperCase() : '';
+          if (tag !== 'CODE' && tag !== 'PRE' && tag !== 'SCRIPT' && tag !== 'STYLE' && tag !== 'TEXTAREA') {
+            textNodes.push(textNode);
+          }
+        }
+        node = walker.nextNode();
+      }
+
+      textNodes.forEach((textNode) => {
+        const text = typeof textNode.nodeValue === 'string' ? textNode.nodeValue : '';
+        if (!text) return;
+        placeholderPattern.lastIndex = 0;
+        if (!placeholderPattern.test(text)) return;
+        placeholderPattern.lastIndex = 0;
+
+        const fragment = document.createDocumentFragment();
+        let lastIndex = 0;
+        let match;
+        while ((match = placeholderPattern.exec(text)) !== null) {
+          const token = match[0] || '';
+          const entry = placeholderMap.get(token);
+          const start = typeof match.index === 'number' ? match.index : 0;
+          if (start > lastIndex) {
+            fragment.appendChild(document.createTextNode(text.slice(lastIndex, start)));
+          }
+          if (entry) {
+            const markerEl = document.createElement('span');
+            markerEl.className = 'annotation-marker';
+            const markerText = typeof entry.text === 'string' ? entry.text : token;
+            markerEl.title = typeof entry.title === 'string' ? entry.title : markerText;
+            setAnnotationMarkerContent(markerEl, markerText);
+            fragment.appendChild(markerEl);
+          } else {
+            fragment.appendChild(document.createTextNode(token));
+          }
+          lastIndex = start + token.length;
+          if (token.length === 0) {
+            placeholderPattern.lastIndex += 1;
+          }
+        }
+
+        if (lastIndex < text.length) {
+          fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+        }
+
+        if (textNode.parentNode) {
+          textNode.parentNode.replaceChild(fragment, textNode);
+        }
+      });
+    };
+
+    const decorateDiffCodeBlocks = (root) => {
+      if (!root) return;
+      const diffBlocks = Array.from(root.querySelectorAll('pre.sourceCode.diff code'));
+
+      diffBlocks.forEach((codeBlock) => {
+        const lineElements = Array.from(codeBlock.children).filter((child) => child instanceof HTMLElement);
+        lineElements.forEach((lineEl) => {
+          const text = typeof lineEl.textContent === 'string' ? lineEl.textContent : '';
+          if (!text) return;
+
+          if (/^\+(?!\+\+)/.test(text)) {
+            lineEl.classList.add('diff-line', 'diff-add-line');
+          } else if (/^-(?!--)/.test(text)) {
+            lineEl.classList.add('diff-line', 'diff-del-line');
+          } else if (/^@@/.test(text)) {
+            lineEl.classList.add('diff-line', 'diff-hunk-line');
+          } else if (/^(?:\+\+\+ |--- )/.test(text)) {
+            lineEl.classList.add('diff-line', 'diff-header-line');
+          } else if (DIFF_META_LINE_REGEX.test(text)) {
+            lineEl.classList.add('diff-line', 'diff-meta-line');
+          }
+
+          const walker = document.createTreeWalker(lineEl, NodeFilter.SHOW_TEXT);
+          const matches = [];
+          let node = walker.nextNode();
+          while (node) {
+            const textNode = node;
+            const value = typeof textNode.nodeValue === 'string' ? textNode.nodeValue : '';
+            const parent = textNode.parentElement;
+            if (value && value.toLowerCase().indexOf('[an:') !== -1 && parent && !parent.closest('a, .annotation-marker')) {
+              matches.push(textNode);
+            }
+            node = walker.nextNode();
+          }
+
+          matches.forEach(replaceAnnotationTextNode);
+        });
+      });
+    };
+
+    const MATHJAX_CDN_URL = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js';
+
+    const waitForFonts = async () => {
+      if ('fonts' in document) {
+        try {
+          await document.fonts.ready;
+        } catch {}
+      }
+    };
+
+    const waitForPaint = async () => {
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    };
+
+    const extractMathFallbackTex = (text, displayMode) => {
+      const source = typeof text === 'string' ? text.trim() : '';
+      if (!source) return '';
+
+      if (displayMode) {
+        if (source.startsWith('$$') && source.endsWith('$$') && source.length >= 4) {
+          return source.slice(2, -2).trim();
+        }
+        if (source.startsWith('\\[') && source.endsWith('\\]') && source.length >= 4) {
+          return source.slice(2, -2).trim();
+        }
+        return source;
+      }
+
+      if (source.startsWith('\\(') && source.endsWith('\\)') && source.length >= 4) {
+        return source.slice(2, -2).trim();
+      }
+      if (source.startsWith('$') && source.endsWith('$') && source.length >= 2) {
+        return source.slice(1, -1).trim();
+      }
+      return source;
+    };
+
+    const collectMathFallbackTargets = (root) => {
+      if (!root) return [];
+      const nodes = Array.from(root.querySelectorAll('.math.display, .math.inline'));
+      const targets = [];
+      const seenTargets = new Set();
+
+      nodes.forEach((node) => {
+        const displayMode = node.classList.contains('display');
+        const rawText = typeof node.textContent === 'string' ? node.textContent : '';
+        const tex = extractMathFallbackTex(rawText, displayMode);
+        if (!tex) return;
+
+        let renderTarget = node;
+        if (displayMode) {
+          const parent = node.parentElement;
+          const parentText = parent && typeof parent.textContent === 'string' ? parent.textContent.trim() : '';
+          if (parent && parent.tagName === 'P' && parentText === rawText.trim()) {
+            renderTarget = parent;
+          }
+        }
+
+        if (seenTargets.has(renderTarget)) return;
+        seenTargets.add(renderTarget);
+        targets.push({ renderTarget, displayMode, tex });
+      });
+
+      return targets;
+    };
+
+    let mathJaxPromise = null;
+    const ensureMathJax = () => {
+      if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+        return Promise.resolve(window.MathJax);
+      }
+      if (mathJaxPromise) return mathJaxPromise;
+
+      mathJaxPromise = new Promise((resolve, reject) => {
+        window.MathJax = {
+          loader: { load: ['[tex]/ams', '[tex]/noerrors', '[tex]/noundefined'] },
+          tex: {
+            inlineMath: [['\\(', '\\)'], ['$', '$']],
+            displayMath: [['\\[', '\\]'], ['$$', '$$']],
+            packages: { '[+]': ['ams', 'noerrors', 'noundefined'] },
+          },
+          options: {
+            skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+          },
+          startup: { typeset: false },
+        };
+
+        const script = document.createElement('script');
+        script.src = MATHJAX_CDN_URL;
+        script.async = true;
+        script.onload = () => {
+          const api = window.MathJax;
+          if (api && api.startup && api.startup.promise && typeof api.startup.promise.then === 'function') {
+            api.startup.promise.then(() => resolve(api)).catch(reject);
+            return;
+          }
+          if (api && typeof api.typesetPromise === 'function') {
+            resolve(api);
+            return;
+          }
+          reject(new Error('MathJax did not initialize.'));
+        };
+        script.onerror = () => reject(new Error('Failed to load MathJax.'));
+        document.head.appendChild(script);
+      }).catch((error) => {
+        mathJaxPromise = null;
+        throw error;
+      });
+
+      return mathJaxPromise;
+    };
+
+    const markerNeedsMath = (text) => {
+      const source = typeof text === 'string' ? text : '';
+      if (!source) return false;
+      const backslash = String.fromCharCode(92);
+      if (source.includes(backslash + '(') || source.includes(backslash + '[') || source.includes('$$')) return true;
+      for (let index = 0; index < source.length - 1; index += 1) {
+        const char = source[index];
+        const next = source[index + 1] || '';
+        if (char === '$' && next.trim() !== '') return true;
+        if (char === backslash && /[A-Za-z]/.test(next)) return true;
+      }
+      return false;
+    };
+
+    const renderAnnotationMarkerMath = async (root) => {
+      if (!root) return;
+      const markers = Array.from(root.querySelectorAll('.annotation-marker')).filter((marker) => {
+        if (!(marker instanceof HTMLElement)) return false;
+        if (marker.querySelector('math, mjx-container')) return false;
+        const text = typeof marker.textContent === 'string' ? marker.textContent : '';
+        return markerNeedsMath(text);
+      });
+      if (markers.length === 0) return;
+
+      let mathJax;
+      try {
+        mathJax = await ensureMathJax();
+      } catch (e) {
+        console.error('MathJax load failed:', e);
+        return;
+      }
+
+      try {
+        await mathJax.typesetPromise(markers);
+      } catch (e) {
+        console.error('Annotation math render failed:', e);
+      }
+    };
+
+    const renderMathFallback = async (root) => {
+      const fallbackTargets = collectMathFallbackTargets(root);
+      if (fallbackTargets.length === 0) return;
+
+      let mathJax;
+      try {
+        mathJax = await ensureMathJax();
+      } catch (e) {
+        console.error('MathJax load failed:', e);
+        return;
+      }
+
+      fallbackTargets.forEach(({ renderTarget, displayMode, tex }) => {
+        renderTarget.textContent = displayMode ? '\\[\n' + tex + '\n\\]' : '\\(' + tex + '\\)';
+      });
+
+      try {
+        await mathJax.typesetPromise(fallbackTargets.map(({ renderTarget }) => renderTarget));
+      } catch (e) {
+        console.error('MathJax render failed:', e);
+      }
+    };
+
+    const renderMermaid = async () => {
+      const mermaidBlocks = document.querySelectorAll('pre.mermaid');
+      if (mermaidBlocks.length === 0) return;
+
+      try {
+        const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+        mermaid.initialize({"startOnLoad":false,"theme":"base","themeVariables":{"background":"#1a1b21","primaryColor":"#25262f","primaryTextColor":"#d4d4d4","primaryBorderColor":"#808080","secondaryColor":"#1f2027","secondaryTextColor":"#d4d4d4","secondaryBorderColor":"#808080","tertiaryColor":"#1f2027","tertiaryTextColor":"#d4d4d4","tertiaryBorderColor":"#808080","lineColor":"#808080","textColor":"#d4d4d4","edgeLabelBackground":"#25262f","nodeBorder":"#808080","clusterBkg":"#1f2027","clusterBorder":"#808080","titleColor":"#f0c674"}});
+        mermaidBlocks.forEach(pre => {
+          const code = pre.querySelector('code');
+          const src = code ? code.textContent : pre.textContent;
+          const wrapper = document.createElement('div');
+          wrapper.className = 'mermaid-container';
+          const div = document.createElement('div');
+          div.className = 'mermaid';
+          div.textContent = src;
+          wrapper.appendChild(div);
+          pre.replaceWith(wrapper);
+        });
+        await mermaid.run();
+      } catch (e) {
+        console.error('Mermaid render failed:', e);
+      }
+    };
+
+    const root = document.getElementById('preview-root');
+    try {
+      await renderMermaid();
+      applyPreviewAnnotationPlaceholders(root);
+      decorateDiffCodeBlocks(root);
+      await renderAnnotationMarkerMath(root);
+      await renderMathFallback(root);
+      await waitForFonts();
+      await waitForPaint();
+    } finally {
+      window.__mermaidDone = true;
+    }
+  })();
+  </script>
+</body>
+</html>

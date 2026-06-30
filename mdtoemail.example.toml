@@ -1,0 +1,18 @@
+[markdown]
+gfm = true
+frontmatter = true
+raw_html = false
+
+[email]
+container_width = 600
+
+[theme]
+background_color = "#f4f4f4"
+container_background = "#ffffff"
+text_color = "#222222"
+link_color = "#2563eb"
+font_family = "Arial, Helvetica, sans-serif"
+base_font_size = "16px"
+# Keep line_height quoted; config values used in CSS are strings for now.
+line_height = "1.5"
+content_padding = "32px"
