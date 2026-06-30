@@ -4,13 +4,18 @@ import { dirname, extname, basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import packageJson from "../package.json";
 import { loadConfig, type Config } from "./config";
-import { renderMarkdown } from "./markdown";
+import { countWarnings, formatDiagnostic, type Diagnostic } from "./diagnostics";
+import { renderEmailDocument } from "./email";
+import { renderMarkdown, type RenderedMarkdown } from "./markdown";
 
 const helpText = `Usage: mdtoemail [options] <input.md>
 
 Options:
   -o, --output <file>   Output HTML file
   -c, --config <file>   TOML config file
+      --theme <name|file>  Theme name from ./themes or TOML theme file
+      --strict             Fail on warning diagnostics
+      --no-warnings        Do not print diagnostics
   -h, --help            Show help
   -v, --version         Show version`;
 
@@ -19,6 +24,9 @@ const cliOptions = {
   version: { type: "boolean", short: "v" },
   output: { type: "string", short: "o" },
   config: { type: "string", short: "c" },
+  theme: { type: "string" },
+  strict: { type: "boolean" },
+  "no-warnings": { type: "boolean" },
 } as const;
 
 async function main(): Promise<void> {
@@ -52,10 +60,23 @@ async function main(): Promise<void> {
     throw new Error("Output path must be different from input path.");
   }
 
-  const config = await loadConfig(values.config);
+  const config = applyCliOverrides(
+    await loadConfig({
+      ...(values.config ? { configPath: values.config } : {}),
+      ...(values.theme ? { theme: values.theme } : {}),
+    }),
+    values,
+  );
   const markdown = await readInput(input);
-  const renderedHtml = await renderInputMarkdown(markdown, config);
-  const html = renderHtmlDocument(renderedHtml, input, config);
+  const rendered = await renderInputMarkdown(markdown, config);
+  printDiagnostics(rendered.diagnostics, config);
+
+  const warningCount = countWarnings(rendered.diagnostics);
+  if (config.email.strict && warningCount > 0) {
+    throw new Error(`Strict mode failed with ${warningCount} warning(s).`);
+  }
+
+  const html = renderEmailDocument(rendered.html, input, config);
 
   try {
     await Bun.write(output, html);
@@ -95,53 +116,31 @@ async function readInput(path: string): Promise<string> {
   }
 }
 
-async function renderInputMarkdown(markdown: string, config: Config): Promise<string> {
+async function renderInputMarkdown(markdown: string, config: Config): Promise<RenderedMarkdown> {
   try {
-    const rendered = await renderMarkdown(markdown, config);
-    return rendered.html;
+    return await renderMarkdown(markdown, config);
   } catch (error) {
     throw new Error(`Could not render Markdown. ${messageFrom(error)}`);
   }
 }
 
-function renderHtmlDocument(contentHtml: string, input: string, config: Config): string {
-  const title = Bun.escapeHTML(basename(input));
-  const bodyStyle = styleAttribute({
-    margin: "0",
-    background: config.theme.backgroundColor,
-    color: config.theme.textColor,
-    "font-family": config.theme.fontFamily,
-    "font-size": config.theme.baseFontSize,
-    "line-height": config.theme.lineHeight,
-  });
-  const containerStyle = styleAttribute({
-    background: config.theme.containerBackground,
-    margin: "0 auto",
-    padding: config.theme.contentPadding,
-    "max-width": `${config.email.containerWidth}px`,
-  });
-  return `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width">
-    <title>${title}</title>
-  </head>
-  <body style="${bodyStyle}">
-    <main style="${containerStyle}">
-      ${contentHtml}
-    </main>
-  </body>
-</html>
-`;
+function applyCliOverrides(config: Config, values: ReturnType<typeof parseCliArgs>["values"]): Config {
+  return {
+    ...config,
+    email: {
+      ...config.email,
+      strict: values.strict ? true : config.email.strict,
+      warnings: values["no-warnings"] ? false : config.email.warnings,
+    },
+  };
 }
 
-function styleAttribute(styles: Record<string, string>): string {
-  return Bun.escapeHTML(
-    Object.entries(styles)
-      .map(([property, value]) => `${property}:${value}`)
-      .join(";"),
-  );
+function printDiagnostics(diagnostics: Diagnostic[], config: Config): void {
+  if (!config.email.warnings) return;
+
+  for (const diagnostic of diagnostics) {
+    console.error(formatDiagnostic(diagnostic));
+  }
 }
 
 function messageFrom(error: unknown): string {

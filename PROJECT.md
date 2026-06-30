@@ -57,9 +57,9 @@ Useful Bun APIs/features:
 - `Bun.file(...).text()` for reading Markdown/config files.
 - `Bun.write(...)` for writing output HTML.
 - `Bun.TOML.parse(...)` for runtime TOML config parsing.
-- `bun build --compile` for possible standalone binaries.
+- `bun build` for bundling the Bun CLI when needed.
 
-Standalone binary output should be tested early because native dependencies like Sätteri may complicate bundling.
+Ship and document this as a Bun/npm CLI.
 
 ## Markdown Engine: Sätteri
 
@@ -127,7 +127,7 @@ That is useful for controlling generated HTML before final rendering.
 ## Important Sätteri Caveats
 
 - Existing remark/rehype plugins do **not** work directly.
-- Native napi binaries may affect standalone executable packaging.
+- Sätteri uses native napi binaries, so packaging should be tested as a normal Bun/npm CLI.
 - Sätteri’s default HTML is normal web HTML, not email-specific HTML.
 - Therefore, Sätteri should be treated as the Markdown/AST engine, not the complete converter.
 
@@ -554,9 +554,9 @@ Also manually test generated output with email-client tools/references:
    - Pin exact version.
    - Keep integration isolated in `src/markdown/satteri.ts`.
 
-2. **Native dependency + Bun standalone executable**
-   - Test `bun build --compile` early.
-   - If problematic, ship as a Bun/npm CLI first.
+2. **Native dependency packaging**
+   - Sätteri uses native dependencies.
+   - Ship as a Bun/npm CLI first.
 
 3. **Email-client compatibility complexity**
    - Keep output conservative.
@@ -622,7 +622,6 @@ Also manually test generated output with email-client tools/references:
 
 - Add npm/Bun CLI package config.
 - Test on macOS/Linux/Windows if possible.
-- Test Bun standalone executable with Sätteri.
 - Document provider-agnostic usage.
 
 ## Final Recommendation

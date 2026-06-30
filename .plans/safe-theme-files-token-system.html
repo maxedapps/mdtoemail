@@ -1,0 +1,1929 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<base href="file:///Users/maximilianschwarzmuller/development/projects/mdtoemail/.plans/" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Markdown Preview</title>
+<style>
+:root {
+  color-scheme: dark;
+  --preview-font-size: 15px;
+  --bg: #1a1b21;
+  --card: #1f2027;
+  --panel-2: #25262f;
+  --border: #5f87ff;
+  --border-muted: #505050;
+  --border-subtle: #28292f;
+  --panel-border: #2c2d31;
+  --text: #d4d4d4;
+  --muted: #808080;
+  --accent: #81a2be;
+  --warn: #ffff00;
+  --error: #cc6666;
+  --ok: #b5bd68;
+  --code-bg: #25262f;
+  --link: #81a2be;
+  --md-heading: #f0c674;
+  --md-link: #81a2be;
+  --md-link-url: #666666;
+  --md-code: #8abeb7;
+  --md-codeblock: #b5bd68;
+  --md-codeblock-border: #31323a;
+  --md-quote: #808080;
+  --md-quote-border: #808080;
+  --md-hr: #808080;
+  --md-list-bullet: #8abeb7;
+  --syntax-keyword: #569cd6;
+  --syntax-function: #dcdcaa;
+  --syntax-variable: #9cdcfe;
+  --syntax-string: #ce9178;
+  --syntax-number: #b5cea8;
+  --syntax-type: #4ec9b0;
+  --syntax-comment: #6a9955;
+  --syntax-operator: #d4d4d4;
+  --syntax-punctuation: #d4d4d4;
+  --syntax-error: #cc6666;
+  --annotation-bg: rgba(129, 162, 190, 0.25);
+  --annotation-border: rgba(129, 162, 190, 0.65);
+  --annotation-text: #d4d4d4;
+  --blockquote-bg: rgba(128, 128, 128, 0.16);
+  --inline-code-bg: rgba(128, 128, 128, 0.18);
+  --table-alt-bg: rgba(128, 128, 128, 0.14);
+  --md-table-border: #28292f;
+  --diff-add-bg: rgba(181, 189, 104, 0.14);
+  --diff-add-text: #b5bd68;
+  --diff-del-bg: rgba(204, 102, 102, 0.14);
+  --diff-del-text: #cc6666;
+  --diff-meta-text: #808080;
+  --diff-header-bg: rgba(129, 162, 190, 0.10);
+  --diff-header-text: #81a2be;
+  --diff-hunk-bg: rgba(129, 162, 190, 0.16);
+  --diff-hunk-text: #81a2be;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+body {
+  min-height: 100vh;
+  padding: 28px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+#preview-root {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  background: var(--card);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 24px 28px;
+  overflow-wrap: anywhere;
+  line-height: 1.58;
+  font-size: var(--preview-font-size);
+}
+#preview-root h1, #preview-root h2, #preview-root h3, #preview-root h4, #preview-root h5, #preview-root h6 {
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--md-heading);
+}
+#preview-root h1 { font-size: 1.6em; border-bottom: 0; padding-bottom: 0; }
+#preview-root h2 { font-size: 1.25em; border-bottom: 0; padding-bottom: 0; }
+#preview-root p, #preview-root ul, #preview-root ol, #preview-root blockquote, #preview-root table {
+  margin-top: 0;
+  margin-bottom: 1em;
+}
+#preview-root li::marker { color: var(--md-list-bullet); }
+#preview-root a { color: var(--md-link); text-decoration: none; }
+#preview-root a:hover { text-decoration: underline; }
+#preview-root a.uri, #preview-root .uri { color: var(--md-link-url); }
+#preview-root blockquote {
+  margin-left: 0;
+  padding: 0.2em 1em;
+  border-left: 0.25em solid var(--md-quote-border);
+  border-radius: 0 8px 8px 0;
+  background: var(--blockquote-bg);
+  color: var(--md-quote);
+}
+#preview-root pre {
+  background: var(--panel-2);
+  border: 1px solid var(--md-codeblock-border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow: auto;
+}
+#preview-root code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.9em;
+  color: var(--md-code);
+}
+#preview-root pre code {
+  color: var(--text);
+}
+#preview-root :not(pre) > code {
+  background: var(--inline-code-bg);
+  border: 1px solid var(--md-codeblock-border);
+  border-radius: 6px;
+  padding: 0.12em 0.35em;
+}
+#preview-root .annotation-marker {
+  display: inline;
+  border-radius: 4px;
+  border: 1px solid var(--annotation-border);
+  background: var(--annotation-bg);
+  color: var(--annotation-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  padding: 0 0.28em;
+}
+#preview-root .annotation-marker mjx-container {
+  margin: 0;
+}
+#preview-root pre.sourceCode.diff code > .diff-line {
+  display: block;
+  margin: 0 -4px;
+  padding: 0 4px;
+  border-radius: 4px;
+}
+#preview-root pre.sourceCode.diff code > .diff-add-line {
+  background: var(--diff-add-bg);
+  color: var(--diff-add-text);
+}
+#preview-root pre.sourceCode.diff code > .diff-del-line {
+  background: var(--diff-del-bg);
+  color: var(--diff-del-text);
+}
+#preview-root pre.sourceCode.diff code > .diff-meta-line {
+  color: var(--diff-meta-text);
+}
+#preview-root pre.sourceCode.diff code > .diff-header-line {
+  background: var(--diff-header-bg);
+  color: var(--diff-header-text);
+  font-weight: 600;
+}
+#preview-root pre.sourceCode.diff code > .diff-hunk-line {
+  background: var(--diff-hunk-bg);
+  color: var(--diff-hunk-text);
+}
+#preview-root pre.sourceCode.diff code > .diff-line .kw,
+#preview-root pre.sourceCode.diff code > .diff-line .dt,
+#preview-root pre.sourceCode.diff code > .diff-line .st,
+#preview-root pre.sourceCode.diff code > .diff-line .va {
+  color: inherit;
+  font-weight: inherit;
+}
+#preview-root code span.kw,
+#preview-root code span.cf,
+#preview-root code span.im {
+  color: var(--syntax-keyword);
+  font-weight: 600;
+}
+#preview-root code span.dt {
+  color: var(--syntax-type);
+  font-weight: 600;
+}
+#preview-root code span.fu,
+#preview-root code span.bu {
+  color: var(--syntax-function);
+}
+#preview-root code span.va,
+#preview-root code span.ot {
+  color: var(--syntax-variable);
+}
+#preview-root code span.st,
+#preview-root code span.ss,
+#preview-root code span.sc,
+#preview-root code span.ch {
+  color: var(--syntax-string);
+}
+#preview-root code span.dv,
+#preview-root code span.bn,
+#preview-root code span.fl {
+  color: var(--syntax-number);
+}
+#preview-root code span.co {
+  color: var(--syntax-comment);
+  font-style: italic;
+}
+#preview-root code span.op {
+  color: var(--syntax-operator);
+}
+#preview-root code span.pp,
+#preview-root code span.pu {
+  color: var(--syntax-punctuation);
+}
+#preview-root code span.er,
+#preview-root code span.al {
+  color: var(--syntax-error);
+  font-weight: 600;
+}
+#preview-root table {
+  border-collapse: collapse;
+  display: block;
+  max-width: 100%;
+  overflow: auto;
+}
+#preview-root th, #preview-root td {
+  border: 1px solid var(--md-table-border);
+  padding: 6px 12px;
+}
+#preview-root thead th {
+  background: var(--panel-2);
+}
+#preview-root tbody tr:nth-child(even) {
+  background: var(--table-alt-bg);
+}
+#preview-root hr {
+  border: 0;
+  border-top: 1px solid var(--md-hr);
+  margin: 1.25em 0;
+}
+#preview-root img { max-width: 100%; }
+#preview-root math[display="block"] {
+  display: block;
+  margin: 1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+#preview-root mjx-container[display="true"] {
+  display: block;
+  margin: 1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+#preview-root .mermaid-container {
+  text-align: center;
+  margin: 1em 0;
+  overflow-x: auto;
+}
+#preview-root .mermaid-container svg {
+  max-width: 100%;
+  height: auto;
+}
+</style>
+</head>
+<body>
+  <article id="preview-root"><h1 id="plan-safe-theme-tokens-and-reusable-theme-files">Plan: Safe Theme Tokens and Reusable Theme Files</h1>
+<h2 id="summary">Summary</h2>
+<p>Add a complete theming milestone for <code>mdtoemail</code>: expand safe theme/layout tokens used by the email renderer and add reusable theme files selected through project config or <code>--theme</code>.</p>
+<p>The goal is more configurability while preserving conservative, broadly supported email HTML. Users should be able to save and share themes as TOML files, but <code>mdtoemail</code> should still control which CSS properties are emitted and reject token values that could inject arbitrary CSS declarations.</p>
+<p>This milestone intentionally avoids arbitrary CSS maps such as <code>[styles.h1] display = "flex"</code>. It uses explicit, validated tokens that map to known email-safe inline styles.</p>
+<h2 id="clarification-status">Clarification status</h2>
+<p>No clarification is needed. The user explicitly wants theme configurability and reusable saved themes in the same milestone.</p>
+<h2 id="confirmed-requirements-and-assumptions">Confirmed requirements and assumptions</h2>
+<ul>
+<li>Use TypeScript and Bun.</li>
+<li>Add no new dependencies.</li>
+<li>Keep implementation simple and incremental, but complete enough to include both token expansion and theme files.</li>
+<li>Preserve existing CLI behavior and current config support.</li>
+<li>Add separate reusable theme files.</li>
+<li>Users can still style directly in the main config file.</li>
+<li><code>--theme &lt;name-or-path&gt;</code> should override the theme selected by config.</li>
+<li>Continue using TOML.</li>
+<li>Keep output conservative and email-client-friendly.</li>
+<li>Do not add arbitrary user-controlled CSS declarations.</li>
+<li>Do not add a server or email sending.</li>
+<li>Do not target standalone binaries.</li>
+</ul>
+<h2 id="important-toml-design-finding">Important TOML design finding</h2>
+<p>A root-level key named <code>theme = "newsletter"</code> cannot coexist with the existing <code>[theme]</code> table in TOML because both use the same key path.</p>
+<p>Therefore, do <strong>not</strong> use this shape:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode toml"><code class="sourceCode toml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">theme</span> <span class="op">=</span> <span class="st">&quot;newsletter&quot;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">[theme]</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="dt">link_color</span> <span class="op">=</span> <span class="st">&quot;#...&quot;</span></span></code></pre></div>
+<p>Use a selector inside the existing <code>[theme]</code> table instead:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode toml"><code class="sourceCode toml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[theme]</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">extends</span> <span class="op">=</span> <span class="st">&quot;newsletter&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="dt">link_color</span> <span class="op">=</span> <span class="st">&quot;#...&quot;</span></span></code></pre></div>
+<p>Rationale:</p>
+<ul>
+<li>Avoids TOML key/table conflicts.</li>
+<li>Keeps all appearance-related config under <code>[theme]</code>.</li>
+<li>Allows project configs to select a base theme and override individual tokens in the same table.</li>
+</ul>
+<h2 id="current-codebase-findings">Current codebase findings</h2>
+<ul>
+<li><code>src/config.ts</code>
+<ul>
+<li><code>Config.email</code> currently contains <code>containerWidth</code>, <code>warnings</code>, <code>strict</code>.</li>
+<li><code>Config.theme</code> currently contains a small set of tokens: colors, font family, base font size, line height, content padding.</li>
+<li>TOML loading is currently one-pass: defaults plus optional config file.</li>
+<li>Unknown keys are ignored in normal project config.</li>
+</ul></li>
+<li><code>src/cli.ts</code>
+<ul>
+<li>uses <code>node:util</code> <code>parseArgs</code>.</li>
+<li>supports <code>--config</code>, <code>--strict</code>, <code>--no-warnings</code>, <code>--output</code>, help/version.</li>
+<li>calls <code>loadConfig(values.config)</code> before reading/rendering Markdown.</li>
+</ul></li>
+<li><code>src/email.ts</code>
+<ul>
+<li>hardcodes many style values that should become tokens:
+<ul>
+<li>outer padding <code>24px 12px</code></li>
+<li>heading colors/font sizes/margins/line heights</li>
+<li>border color <code>#dddddd</code></li>
+<li>code background <code>#f3f4f6</code></li>
+<li>table header background currently coupled to code background</li>
+<li>list/table/image/pre/blockquote margins and padding</li>
+</ul></li>
+<li>uses inline styles only.</li>
+<li>table wrapper and safe element renderer are centralized.</li>
+</ul></li>
+<li><code>README.md</code>
+<ul>
+<li>documents current config and CLI flags.</li>
+<li>has only a brief theme section.</li>
+</ul></li>
+<li><code>mdtoemail.example.toml</code>
+<ul>
+<li>documents the small theme subset.</li>
+</ul></li>
+<li><code>examples/</code>
+<ul>
+<li>contains Markdown examples and generated HTML.</li>
+<li>no theme files yet.</li>
+</ul></li>
+</ul>
+<h2 id="chosen-implementation-strategy">Chosen implementation strategy</h2>
+<p>Implement theming in three related pieces:</p>
+<ol type="1">
+<li>Expand safe tokens in <code>Config.email</code> and <code>Config.theme</code>.</li>
+<li>Add theme-file loading with a controlled merge order.</li>
+<li>Add example theme files and documentation.</li>
+</ol>
+<h3 id="config-model">Config model</h3>
+<p>Normal project config can contain behavior and appearance:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode toml"><code class="sourceCode toml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[markdown]</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">gfm</span> <span class="op">=</span> <span class="cn">true</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="dt">frontmatter</span> <span class="op">=</span> <span class="cn">true</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="dt">raw_html</span> <span class="op">=</span> <span class="cn">false</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">[email]</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="dt">container_width</span> <span class="op">=</span> <span class="dv">600</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="dt">outer_padding</span> <span class="op">=</span> <span class="st">&quot;24px 12px&quot;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="dt">warnings</span> <span class="op">=</span> <span class="cn">true</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="dt">strict</span> <span class="op">=</span> <span class="cn">false</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="kw">[theme]</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="dt">extends</span> <span class="op">=</span> <span class="st">&quot;newsletter&quot;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="dt">background_color</span> <span class="op">=</span> <span class="st">&quot;#f7f2ea&quot;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="dt">link_color</span> <span class="op">=</span> <span class="st">&quot;#b45309&quot;</span></span></code></pre></div>
+<p>Theme files should be appearance/layout-only:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode toml"><code class="sourceCode toml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># themes/newsletter.toml</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">[email]</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="dt">container_width</span> <span class="op">=</span> <span class="dv">640</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="dt">outer_padding</span> <span class="op">=</span> <span class="st">&quot;32px 12px&quot;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="kw">[theme]</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="dt">background_color</span> <span class="op">=</span> <span class="st">&quot;#f7f2ea&quot;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="dt">container_background</span> <span class="op">=</span> <span class="st">&quot;#ffffff&quot;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="dt">text_color</span> <span class="op">=</span> <span class="st">&quot;#1f2933&quot;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="dt">heading_color</span> <span class="op">=</span> <span class="st">&quot;#111827&quot;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="dt">link_color</span> <span class="op">=</span> <span class="st">&quot;#b45309&quot;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="dt">border_color</span> <span class="op">=</span> <span class="st">&quot;#e5d3bd&quot;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="dt">table_header_background</span> <span class="op">=</span> <span class="st">&quot;#f9f5ef&quot;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="dt">code_background</span> <span class="op">=</span> <span class="st">&quot;#f9f5ef&quot;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="dt">font_family</span> <span class="op">=</span> <span class="st">&quot;Arial, Helvetica, sans-serif&quot;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="dt">base_font_size</span> <span class="op">=</span> <span class="st">&quot;16px&quot;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="dt">line_height</span> <span class="op">=</span> <span class="st">&quot;1.6&quot;</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="dt">content_padding</span> <span class="op">=</span> <span class="st">&quot;36px&quot;</span></span></code></pre></div>
+<p>Theme files may only override:</p>
+<ul>
+<li><code>[theme]</code> tokens</li>
+<li><code>[email]</code> layout keys:
+<ul>
+<li><code>container_width</code></li>
+<li><code>outer_padding</code></li>
+</ul></li>
+</ul>
+<p>Theme files must not override behavior:</p>
+<ul>
+<li><code>[markdown]</code></li>
+<li><code>email.warnings</code></li>
+<li><code>email.strict</code></li>
+</ul>
+<p>Theme files also must not include <code>[theme].extends</code>; no theme-to-theme inheritance/chaining in this milestone.</p>
+<h3 id="merge-order">Merge order</h3>
+<p>Use this order:</p>
+<ol type="1">
+<li><code>defaultConfig</code></li>
+<li>selected theme file, if any</li>
+<li>project config file values</li>
+<li>CLI behavior overrides (<code>--strict</code>, <code>--no-warnings</code>)</li>
+</ol>
+<p>This lets a project select a base theme and override specific tokens locally.</p>
+<p>Example:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode toml"><code class="sourceCode toml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[theme]</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="dt">extends</span> <span class="op">=</span> <span class="st">&quot;newsletter&quot;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="dt">link_color</span> <span class="op">=</span> <span class="st">&quot;#dc2626&quot;</span></span></code></pre></div>
+<p><code>newsletter</code> supplies the full base look, and the project config changes only the link color.</p>
+<h3 id="theme-selection">Theme selection</h3>
+<p>Support both project-config and CLI selection:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode toml"><code class="sourceCode toml"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[theme]</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="dt">extends</span> <span class="op">=</span> <span class="st">&quot;newsletter&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts input.md <span class="at">--theme</span> newsletter</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts input.md <span class="at">--theme</span> ./examples/themes/newsletter.toml</span></code></pre></div>
+<p>Precedence:</p>
+<ul>
+<li><code>--theme</code> overrides <code>[theme].extends</code>.</li>
+<li>If no theme is selected, use only defaults + project config.</li>
+</ul>
+<h3 id="theme-resolution">Theme resolution</h3>
+<p>Use simple deterministic resolution.</p>
+<p>Define a <code>themeBaseDir</code>:</p>
+<ul>
+<li>explicit <code>--config</code>: directory of the resolved config file path</li>
+<li>no explicit config: current working directory</li>
+</ul>
+<p>Resolve all relative theme selectors from <code>themeBaseDir</code>, including CLI <code>--theme</code>. This keeps config-selected themes and CLI-selected themes consistent.</p>
+<p>If the selector looks path-like or ends with <code>.toml</code>, treat it as a path:</p>
+<ul>
+<li>starts with <code>.</code></li>
+<li>starts with <code>/</code></li>
+<li>contains <code>/</code> or <code>\</code></li>
+<li>ends with <code>.toml</code></li>
+</ul>
+<p>Path-like selector resolution:</p>
+<ul>
+<li>absolute path: use as-is</li>
+<li>relative path: resolve from <code>themeBaseDir</code></li>
+</ul>
+<p>If the selector is a plain name, resolve it against:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>&lt;themeBaseDir&gt;/themes/&lt;name&gt;.toml</span></code></pre></div>
+<p>Examples:</p>
+<ul>
+<li><code>--config ./project/mdtoemail.toml</code> + <code>[theme].extends = "newsletter"</code> loads <code>./project/themes/newsletter.toml</code>.</li>
+<li><code>--config ./project/mdtoemail.toml --theme newsletter</code> also loads <code>./project/themes/newsletter.toml</code>.</li>
+<li><code>--config ./project/mdtoemail.toml --theme ./themes/minimal.toml</code> loads <code>./project/themes/minimal.toml</code>.</li>
+<li><code>--theme newsletter</code> with no config loads <code>./themes/newsletter.toml</code> from cwd.</li>
+</ul>
+<p>Do not add global theme lookup such as <code>~/.config/mdtoemail/themes</code> in this milestone.</p>
+<h2 id="css-value-safety">CSS value safety</h2>
+<p>This is required in this milestone.</p>
+<p>Because theme values are inserted into inline <code>style</code> attributes, string tokens must be validated to prevent CSS declaration injection. A value like this must be rejected:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode toml"><code class="sourceCode toml"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="dt">link_color</span> <span class="op">=</span> <span class="st">&quot;blue; background-image: url(https://example.com/track.png)&quot;</span></span></code></pre></div>
+<p>Otherwise it would inject extra CSS declarations into generated email HTML.</p>
+<p>Add a shared validator for style token strings, used for all <code>[theme]</code> string tokens and layout style strings such as <code>email.outer_padding</code>.</p>
+<p>Minimum validation:</p>
+<ul>
+<li>reject ASCII control characters</li>
+<li>reject <code>;</code></li>
+<li>reject <code>{</code> and <code>}</code></li>
+<li>reject <code>/*</code> and <code>*/</code></li>
+<li>reject case-insensitive <code>url(</code></li>
+<li>reject case-insensitive <code>expression(</code></li>
+<li>cap length, e.g. max 200 characters</li>
+<li>require non-empty strings after trim</li>
+</ul>
+<p>Allow normal safe values such as:</p>
+<ul>
+<li><code>#2563eb</code></li>
+<li><code>16px</code></li>
+<li><code>1.5</code></li>
+<li><code>90%</code></li>
+<li><code>0 0 16px 0</code></li>
+<li><code>Arial, Helvetica, sans-serif</code></li>
+<li><code>Consolas, Monaco, monospace</code></li>
+</ul>
+<p>Error example:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>Invalid config: theme.link_color contains unsupported CSS characters or functions.</span></code></pre></div>
+<p>Keep <code>rawStyleAttribute(...)</code> as a serializer for property names chosen by the renderer, but never pass unvalidated user style values into it.</p>
+<h2 id="safe-token-set">Safe token set</h2>
+<p>This token set is larger than today but still intentionally bounded. It maps to existing renderer properties and avoids arbitrary CSS.</p>
+<h3 id="emaillayout-tokens">Email/layout tokens</h3>
+<p>Add:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>email<span class="op">:</span> {</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  containerWidth<span class="op">:</span> <span class="dt">number</span><span class="op">;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  outerPadding<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  warnings<span class="op">:</span> <span class="dt">boolean</span><span class="op">;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  strict<span class="op">:</span> <span class="dt">boolean</span><span class="op">;</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>TOML:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode toml"><code class="sourceCode toml"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[email]</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="dt">container_width</span> <span class="op">=</span> <span class="dv">600</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="dt">outer_padding</span> <span class="op">=</span> <span class="st">&quot;24px 12px&quot;</span></span></code></pre></div>
+<h3 id="theme-tokens">Theme tokens</h3>
+<p>Keep existing tokens and add/rename as needed:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>theme<span class="op">:</span> {</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  backgroundColor<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  containerBackground<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  textColor<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  headingColor<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  mutedTextColor<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  linkColor<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  borderColor<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  tableHeaderBackground<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>  codeBackground<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>  blockquoteBorderColor<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>  fontFamily<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>  codeFontFamily<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>  baseFontSize<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>  smallFontSize<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>  lineHeight<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>  contentPadding<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>  h1FontSize<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>  h2FontSize<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>  h3FontSize<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>  minorHeadingFontSize<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>  h1LineHeight<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>  h2LineHeight<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>  h3LineHeight<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>  minorHeadingLineHeight<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>  h1Margin<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>  h2Margin<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>  h3Margin<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>  minorHeadingMargin<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>  paragraphMargin<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>  listMargin<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>  listPadding<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>  listItemMargin<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a>  blockquoteMargin<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a>  blockquotePadding<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>  codeFontSize<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a>  codePadding<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a>  preMargin<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a>  prePadding<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a>  preFontSize<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a>  preLineHeight<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a>  hrMargin<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a>  imageMargin<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a>  tableMargin<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a>  tableCellPadding<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-46"><a href="#cb13-46" aria-hidden="true" tabindex="-1"></a>  footnoteMargin<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-47"><a href="#cb13-47" aria-hidden="true" tabindex="-1"></a>  footnotePadding<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb13-48"><a href="#cb13-48" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Notes:</p>
+<ul>
+<li><code>mutedTextColor</code> and <code>smallFontSize</code> must be used, not dead config. Use them for GFM footnote <code>section</code> styling.</li>
+<li><code>tableHeaderBackground</code> must be separate from <code>codeBackground</code> to avoid surprising coupling.</li>
+<li>Some renderer choices intentionally remain hardcoded for now:
+<ul>
+<li>heading/table header font weight <code>700</code></li>
+<li>link underline</li>
+<li>border widths (<code>1px</code> table/hr/footnote, <code>4px</code> blockquote)</li>
+<li>image <code>display:block</code>, <code>max-width:100%</code>, <code>height:auto</code>, <code>border:0</code></li>
+<li>table <code>width:100%</code> and <code>border-collapse:collapse</code></li>
+<li><code>pre</code> overflow handling</li>
+</ul></li>
+</ul>
+<p>Suggested defaults should match current output as closely as possible:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode toml"><code class="sourceCode toml"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[email]</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="dt">outer_padding</span> <span class="op">=</span> <span class="st">&quot;24px 12px&quot;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="kw">[theme]</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="dt">heading_color</span> <span class="op">=</span> <span class="st">&quot;#222222&quot;</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="dt">muted_text_color</span> <span class="op">=</span> <span class="st">&quot;#666666&quot;</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="dt">border_color</span> <span class="op">=</span> <span class="st">&quot;#dddddd&quot;</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="dt">table_header_background</span> <span class="op">=</span> <span class="st">&quot;#f3f4f6&quot;</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="dt">code_background</span> <span class="op">=</span> <span class="st">&quot;#f3f4f6&quot;</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="dt">blockquote_border_color</span> <span class="op">=</span> <span class="st">&quot;#dddddd&quot;</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a><span class="dt">code_font_family</span> <span class="op">=</span> <span class="st">&quot;Consolas, Monaco, monospace&quot;</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="dt">small_font_size</span> <span class="op">=</span> <span class="st">&quot;14px&quot;</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a><span class="dt">h1_font_size</span> <span class="op">=</span> <span class="st">&quot;28px&quot;</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a><span class="dt">h2_font_size</span> <span class="op">=</span> <span class="st">&quot;24px&quot;</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a><span class="dt">h3_font_size</span> <span class="op">=</span> <span class="st">&quot;20px&quot;</span></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a><span class="dt">minor_heading_font_size</span> <span class="op">=</span> <span class="st">&quot;16px&quot;</span></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a><span class="dt">h1_line_height</span> <span class="op">=</span> <span class="st">&quot;1.25&quot;</span></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a><span class="dt">h2_line_height</span> <span class="op">=</span> <span class="st">&quot;1.3&quot;</span></span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a><span class="dt">h3_line_height</span> <span class="op">=</span> <span class="st">&quot;1.35&quot;</span></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a><span class="dt">minor_heading_line_height</span> <span class="op">=</span> <span class="st">&quot;1.5&quot;</span></span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a><span class="dt">h1_margin</span> <span class="op">=</span> <span class="st">&quot;0 0 20px 0&quot;</span></span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a><span class="dt">h2_margin</span> <span class="op">=</span> <span class="st">&quot;24px 0 16px 0&quot;</span></span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a><span class="dt">h3_margin</span> <span class="op">=</span> <span class="st">&quot;20px 0 12px 0&quot;</span></span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a><span class="dt">minor_heading_margin</span> <span class="op">=</span> <span class="st">&quot;16px 0 8px 0&quot;</span></span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a><span class="dt">paragraph_margin</span> <span class="op">=</span> <span class="st">&quot;0 0 16px 0&quot;</span></span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a><span class="dt">list_margin</span> <span class="op">=</span> <span class="st">&quot;0 0 16px 0&quot;</span></span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a><span class="dt">list_padding</span> <span class="op">=</span> <span class="st">&quot;0 0 0 24px&quot;</span></span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a><span class="dt">list_item_margin</span> <span class="op">=</span> <span class="st">&quot;0 0 8px 0&quot;</span></span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a><span class="dt">blockquote_margin</span> <span class="op">=</span> <span class="st">&quot;0 0 16px 0&quot;</span></span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a><span class="dt">blockquote_padding</span> <span class="op">=</span> <span class="st">&quot;0 0 0 16px&quot;</span></span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a><span class="dt">code_font_size</span> <span class="op">=</span> <span class="st">&quot;90%&quot;</span></span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a><span class="dt">code_padding</span> <span class="op">=</span> <span class="st">&quot;2px 4px&quot;</span></span>
+<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a><span class="dt">pre_margin</span> <span class="op">=</span> <span class="st">&quot;0 0 16px 0&quot;</span></span>
+<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a><span class="dt">pre_padding</span> <span class="op">=</span> <span class="st">&quot;12px&quot;</span></span>
+<span id="cb14-35"><a href="#cb14-35" aria-hidden="true" tabindex="-1"></a><span class="dt">pre_font_size</span> <span class="op">=</span> <span class="st">&quot;14px&quot;</span></span>
+<span id="cb14-36"><a href="#cb14-36" aria-hidden="true" tabindex="-1"></a><span class="dt">pre_line_height</span> <span class="op">=</span> <span class="st">&quot;1.4&quot;</span></span>
+<span id="cb14-37"><a href="#cb14-37" aria-hidden="true" tabindex="-1"></a><span class="dt">hr_margin</span> <span class="op">=</span> <span class="st">&quot;24px 0&quot;</span></span>
+<span id="cb14-38"><a href="#cb14-38" aria-hidden="true" tabindex="-1"></a><span class="dt">image_margin</span> <span class="op">=</span> <span class="st">&quot;0 0 16px 0&quot;</span></span>
+<span id="cb14-39"><a href="#cb14-39" aria-hidden="true" tabindex="-1"></a><span class="dt">table_margin</span> <span class="op">=</span> <span class="st">&quot;0 0 16px 0&quot;</span></span>
+<span id="cb14-40"><a href="#cb14-40" aria-hidden="true" tabindex="-1"></a><span class="dt">table_cell_padding</span> <span class="op">=</span> <span class="st">&quot;8px&quot;</span></span>
+<span id="cb14-41"><a href="#cb14-41" aria-hidden="true" tabindex="-1"></a><span class="dt">footnote_margin</span> <span class="op">=</span> <span class="st">&quot;24px 0 0 0&quot;</span></span>
+<span id="cb14-42"><a href="#cb14-42" aria-hidden="true" tabindex="-1"></a><span class="dt">footnote_padding</span> <span class="op">=</span> <span class="st">&quot;16px 0 0 0&quot;</span></span></code></pre></div>
+<h3 id="theme-selector-field">Theme selector field</h3>
+<p>Add a project-config-only optional token:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode toml"><code class="sourceCode toml"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[theme]</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="dt">extends</span> <span class="op">=</span> <span class="st">&quot;newsletter&quot;</span></span></code></pre></div>
+<p>Implementation detail:</p>
+<ul>
+<li><code>Config.theme.extends</code> does not need to exist in the resolved final config used by rendering.</li>
+<li>Treat <code>extends</code> as loader metadata.</li>
+<li><code>mergeConfig(...)</code> should validate it as a string when present but ignore it for final rendering.</li>
+<li><code>mergeThemeConfig(...)</code> should reject it in theme files.</li>
+</ul>
+<h2 id="implementation-tasks">Implementation tasks</h2>
+<h3 id="refactor-config-loading-to-support-theme-selection">1. Refactor config loading to support theme selection</h3>
+<p>Update <code>src/config.ts</code> while keeping it a single file for now.</p>
+<p>Use a single options-object API. Do not keep dual positional overloads.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">interface</span> LoadConfigOptions {</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  configPath<span class="op">?:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  cwd<span class="op">?:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  theme<span class="op">?:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">async</span> <span class="kw">function</span> <span class="fu">loadConfig</span>(options<span class="op">?:</span> LoadConfigOptions)<span class="op">:</span> <span class="bu">Promise</span><span class="op">&lt;</span>Config<span class="op">&gt;;</span></span></code></pre></div>
+<p>Update all callers/tests from:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">loadConfig</span>(path)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">loadConfig</span>(<span class="kw">undefined</span><span class="op">,</span> dir)</span></code></pre></div>
+<p>to:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">loadConfig</span>({ configPath<span class="op">:</span> path })</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="fu">loadConfig</span>({ cwd<span class="op">:</span> dir })</span></code></pre></div>
+<p>Implementation outline:</p>
+<ol type="1">
+<li>Resolve <code>cwd = options?.cwd ?? process.cwd()</code>.</li>
+<li>Resolve project config path:
+<ul>
+<li>if <code>configPath</code> is provided, read it and fail if missing/invalid.</li>
+<li>else read <code>&lt;cwd&gt;/mdtoemail.toml</code> if present.</li>
+<li>else use no project raw config.</li>
+</ul></li>
+<li>Determine <code>themeBaseDir</code>:
+<ul>
+<li>explicit config: <code>dirname(resolve(cwd, configPath))</code> for relative paths.</li>
+<li>auto/default: <code>cwd</code>.</li>
+</ul></li>
+<li>Determine theme selector:
+<ul>
+<li>CLI/options <code>theme</code>, if provided.</li>
+<li>otherwise raw project config <code>[theme].extends</code>, if string.</li>
+</ul></li>
+<li>If selector exists, load theme file:
+<ul>
+<li>resolve by path/name rules.</li>
+<li>parse TOML.</li>
+<li>validate as theme file, not full project config.</li>
+</ul></li>
+<li>Merge:
+<ul>
+<li><code>defaultConfig</code></li>
+<li>theme raw config, if loaded</li>
+<li>project raw config, if loaded</li>
+</ul></li>
+<li>Return complete resolved <code>Config</code>.</li>
+</ol>
+<p>Keep error messages clear:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>Could not read theme file &quot;...&quot;. ENOENT: ...</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>Invalid config: theme.extends must be a string.</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>Invalid theme: markdown is not allowed in theme files.</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>Invalid theme: theme.extends is not allowed in theme files.</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>Invalid theme: email.strict is not allowed in theme files.</span></code></pre></div>
+<p>Important integration detail:</p>
+<ul>
+<li>Existing config read error handling special-cases <code>Invalid config:</code>. New theme errors should not be wrapped as <code>Could not read config file ...</code>.</li>
+<li>Either preserve <code>Invalid theme:</code> messages directly or normalize them under <code>Invalid config:</code> when thrown from <code>loadConfig</code>.</li>
+<li>Tests should assert clean theme validation errors.</li>
+</ul>
+<h3 id="add-declarative-field-mappings">2. Add declarative field mappings</h3>
+<p>Avoid dozens of repetitive one-off <code>setString(...)</code> calls for theme tokens.</p>
+<p>Use explicit mapping tables as the single source of truth:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> themeStringFields <span class="op">=</span> [</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  [<span class="st">&quot;background_color&quot;</span><span class="op">,</span> <span class="st">&quot;backgroundColor&quot;</span>]<span class="op">,</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  [<span class="st">&quot;container_background&quot;</span><span class="op">,</span> <span class="st">&quot;containerBackground&quot;</span>]<span class="op">,</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  [<span class="st">&quot;heading_color&quot;</span><span class="op">,</span> <span class="st">&quot;headingColor&quot;</span>]<span class="op">,</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ...</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>] <span class="im">as</span> <span class="kw">const</span><span class="op">;</span></span></code></pre></div>
+<p>Then loop:</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (<span class="kw">const</span> [tomlKey<span class="op">,</span> configKey] <span class="kw">of</span> themeStringFields) {</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">setStyleString</span>(raw<span class="op">.</span><span class="at">theme</span><span class="op">,</span> tomlKey<span class="op">,</span> <span class="vs">`theme.</span><span class="sc">${</span>tomlKey<span class="sc">}</span><span class="vs">`</span><span class="op">,</span> (value) <span class="kw">=&gt;</span> {</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    config<span class="op">.</span><span class="at">theme</span>[configKey] <span class="op">=</span> value<span class="op">;</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Keep boolean/number fields explicit because there are few of them.</p>
+<p>Benefits:</p>
+<ul>
+<li>Less boilerplate.</li>
+<li>Lower risk of snake_case/camelCase mismatch.</li>
+<li>Easy to run all theme values through the CSS value validator.</li>
+</ul>
+<h3 id="add-merge-helpers">3. Add merge helpers</h3>
+<p>Suggested helpers:</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">function</span> <span class="fu">mergeConfig</span>(raw<span class="op">:</span> <span class="dt">unknown</span><span class="op">,</span> base<span class="op">?:</span> Config)<span class="op">:</span> Config<span class="op">;</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">mergeThemeConfig</span>(raw<span class="op">:</span> <span class="dt">unknown</span><span class="op">,</span> base<span class="op">:</span> Config)<span class="op">:</span> Config<span class="op">;</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">themeSelectorFrom</span>(raw<span class="op">:</span> <span class="dt">unknown</span>)<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">undefined</span><span class="op">;</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">resolveThemePath</span>(selector<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> baseDir<span class="op">:</span> <span class="dt">string</span>)<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">validateThemeStyleValue</span>(value<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> label<span class="op">:</span> <span class="dt">string</span>)<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span></code></pre></div>
+<p>Important:</p>
+<ul>
+<li><code>mergeConfig(raw, base = defaultConfig)</code> must start with <code>cloneConfig(base)</code>, not mutate <code>base</code>.</li>
+<li><code>cloneConfig</code> must include all new tokens.</li>
+<li><code>mergeThemeConfig</code> should only accept <code>[theme]</code> tokens and allowed <code>[email]</code> layout keys.</li>
+<li>Keep unknown keys in normal project config ignored, matching current behavior.</li>
+<li>Theme files are stricter than project configs for behavior sections/keys.</li>
+</ul>
+<h3 id="extend-config-typesdefaultsmapping">4. Extend config types/defaults/mapping</h3>
+<p>Update <code>Config</code> and <code>defaultConfig</code> with the token set above.</p>
+<p>Validation:</p>
+<ul>
+<li><code>container_width</code>: finite number.</li>
+<li><code>warnings</code> / <code>strict</code>: boolean.</li>
+<li><code>outer_padding</code>: validated style string.</li>
+<li>all <code>[theme]</code> tokens: validated style string.</li>
+<li><code>[theme].extends</code>: string selector in project config only.</li>
+</ul>
+<p>Example validation errors:</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>Invalid config: theme.border_color must be a string.</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>Invalid config: theme.link_color contains unsupported CSS characters or functions.</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>Invalid config: email.outer_padding contains unsupported CSS characters or functions.</span></code></pre></div>
+<h3 id="wire---theme-into-the-cli">5. Wire <code>--theme</code> into the CLI</h3>
+<p>Update <code>src/cli.ts</code>:</p>
+<ul>
+<li>add parse option:</li>
+</ul>
+<div class="sourceCode" id="cb24"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>theme<span class="op">:</span> { type<span class="op">:</span> <span class="st">&quot;string&quot;</span> }</span></code></pre></div>
+<ul>
+<li>help text:</li>
+</ul>
+<div class="sourceCode" id="cb25"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>      --theme &lt;name|file&gt;  Theme name from ./themes or TOML theme file</span></code></pre></div>
+<ul>
+<li>load config with theme override:</li>
+</ul>
+<div class="sourceCode" id="cb26"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> config <span class="op">=</span> <span class="fu">applyCliOverrides</span>(</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">await</span> <span class="fu">loadConfig</span>({ configPath<span class="op">:</span> values<span class="op">.</span><span class="at">config</span><span class="op">,</span> theme<span class="op">:</span> values<span class="op">.</span><span class="at">theme</span> })<span class="op">,</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  values<span class="op">,</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span></code></pre></div>
+<p>Keep <code>--theme</code> independent from <code>--config</code>; users can provide either or both.</p>
+<h3 id="use-expanded-tokens-in-srcemail.ts">6. Use expanded tokens in <code>src/email.ts</code></h3>
+<p>Replace hardcoded style values with config tokens.</p>
+<p>Examples:</p>
+<ul>
+<li>wrapper outer cell padding:</li>
+</ul>
+<div class="sourceCode" id="cb27"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>padding<span class="op">:</span> config<span class="op">.</span><span class="at">email</span><span class="op">.</span><span class="at">outerPadding</span></span></code></pre></div>
+<ul>
+<li>headings:</li>
+</ul>
+<div class="sourceCode" id="cb28"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>color<span class="op">:</span> config<span class="op">.</span><span class="at">theme</span><span class="op">.</span><span class="at">headingColor</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>font<span class="op">-</span>size<span class="op">:</span> config<span class="op">.</span><span class="at">theme</span><span class="op">.</span><span class="at">h1FontSize</span></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>line<span class="op">-</span>height<span class="op">:</span> config<span class="op">.</span><span class="at">theme</span><span class="op">.</span><span class="at">h1LineHeight</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>margin<span class="op">:</span> config<span class="op">.</span><span class="at">theme</span><span class="op">.</span><span class="at">h1Margin</span></span></code></pre></div>
+<ul>
+<li>h4/h5/h6:</li>
+</ul>
+<div class="sourceCode" id="cb29"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>font<span class="op">-</span>size<span class="op">:</span> config<span class="op">.</span><span class="at">theme</span><span class="op">.</span><span class="at">minorHeadingFontSize</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>line<span class="op">-</span>height<span class="op">:</span> config<span class="op">.</span><span class="at">theme</span><span class="op">.</span><span class="at">minorHeadingLineHeight</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>margin<span class="op">:</span> config<span class="op">.</span><span class="at">theme</span><span class="op">.</span><span class="at">minorHeadingMargin</span></span></code></pre></div>
+<ul>
+<li>code/pre:</li>
+</ul>
+<div class="sourceCode" id="cb30"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>background<span class="op">:</span> config<span class="op">.</span><span class="at">theme</span><span class="op">.</span><span class="at">codeBackground</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>font<span class="op">-</span>family<span class="op">:</span> config<span class="op">.</span><span class="at">theme</span><span class="op">.</span><span class="at">codeFontFamily</span></span></code></pre></div>
+<ul>
+<li>table header:</li>
+</ul>
+<div class="sourceCode" id="cb31"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>background<span class="op">:</span> config<span class="op">.</span><span class="at">theme</span><span class="op">.</span><span class="at">tableHeaderBackground</span></span></code></pre></div>
+<ul>
+<li>borders:</li>
+</ul>
+<div class="sourceCode" id="cb32"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>borderColor <span class="op">=</span> config<span class="op">.</span><span class="at">theme</span><span class="op">.</span><span class="at">borderColor</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>blockquoteBorderColor <span class="op">=</span> config<span class="op">.</span><span class="at">theme</span><span class="op">.</span><span class="at">blockquoteBorderColor</span></span></code></pre></div>
+<ul>
+<li>table cells:</li>
+</ul>
+<div class="sourceCode" id="cb33"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>padding<span class="op">:</span> config<span class="op">.</span><span class="at">theme</span><span class="op">.</span><span class="at">tableCellPadding</span></span></code></pre></div>
+<ul>
+<li>footnote <code>section</code>:</li>
+</ul>
+<div class="sourceCode" id="cb34"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>color<span class="op">:</span> config<span class="op">.</span><span class="at">theme</span><span class="op">.</span><span class="at">mutedTextColor</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>font<span class="op">-</span>size<span class="op">:</span> config<span class="op">.</span><span class="at">theme</span><span class="op">.</span><span class="at">smallFontSize</span></span></code></pre></div>
+<p>Preserve current output with default tokens as much as practical.</p>
+<h3 id="add-example-themes">7. Add example themes</h3>
+<p>Create:</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>examples/themes/minimal.toml</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>examples/themes/newsletter.toml</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>examples/themes/transactional.toml</span></code></pre></div>
+<p>Do <strong>not</strong> add <code>examples/themes/default.toml</code> in this milestone. The built-in defaults are already the default, and a duplicate default file would become a second source of truth.</p>
+<p>Guidance:</p>
+<ul>
+<li><code>minimal.toml</code>: white background, narrower spacing, black/gray palette.</li>
+<li><code>newsletter.toml</code>: warmer background, branded link color, more generous spacing.</li>
+<li><code>transactional.toml</code>: crisp neutral style for account/security emails.</li>
+</ul>
+<p>Generate themed outputs using existing example Markdown:</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts examples/product-update.md <span class="at">--theme</span> examples/themes/newsletter.toml <span class="at">-o</span> examples/product-update-newsletter.html</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts examples/security-notice.md <span class="at">--theme</span> examples/themes/transactional.toml <span class="at">-o</span> examples/security-notice-transactional.html</span></code></pre></div>
+<h3 id="update-docs">8. Update docs</h3>
+<p>Update <code>README.md</code>:</p>
+<ul>
+<li>explain direct <code>[theme]</code> tokens in normal config.</li>
+<li>explain reusable theme files.</li>
+<li>explain <code>[theme].extends</code>.</li>
+<li>explain <code>--theme &lt;name-or-path&gt;</code>.</li>
+<li>explain resolution rules.</li>
+<li>document theme-file restrictions:
+<ul>
+<li>can contain <code>[theme]</code></li>
+<li>can contain <code>[email] container_width</code> / <code>outer_padding</code></li>
+<li>must not contain <code>[markdown]</code>, <code>email.strict</code>, <code>email.warnings</code>, or <code>[theme].extends</code></li>
+</ul></li>
+<li>explain style token safety validation.</li>
+<li>add examples:</li>
+</ul>
+<div class="sourceCode" id="cb37"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts examples/product-update.md <span class="at">--theme</span> newsletter <span class="at">-o</span> email.html</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts examples/product-update.md <span class="at">--theme</span> ./examples/themes/newsletter.toml <span class="at">-o</span> email.html</span></code></pre></div>
+<p>Update <code>mdtoemail.example.toml</code> with all supported tokens so users can discover them.</p>
+<h3 id="tests">9. Tests</h3>
+<h4 id="config-tests">Config tests</h4>
+<p>Update <code>test/config.test.ts</code>:</p>
+<ul>
+<li>defaults include new tokens.</li>
+<li>full TOML override maps representative new fields.</li>
+<li>partial override preserves defaults.</li>
+<li>invalid token type fails clearly.</li>
+<li>CSS injection values are rejected:
+<ul>
+<li><code>link_color = "blue; display:flex"</code></li>
+<li><code>background_color = "url(https://example.com/x.png)"</code></li>
+</ul></li>
+<li>explicit config with <code>[theme].extends = "newsletter"</code> loads <code>themes/newsletter.toml</code> relative to config file directory.</li>
+<li><code>loadConfig({ theme: "minimal", cwd })</code> loads <code>&lt;cwd&gt;/themes/minimal.toml</code>.</li>
+<li>options theme override wins over <code>[theme].extends</code>.</li>
+<li>path-like theme selectors work relative to <code>themeBaseDir</code>.</li>
+<li>missing theme file fails clearly and names the resolved path.</li>
+<li>theme file with <code>[markdown]</code> fails.</li>
+<li>theme file with <code>email.strict</code> or <code>email.warnings</code> fails.</li>
+<li>theme file with <code>[theme].extends</code> fails.</li>
+<li>project config can override a loaded theme token.</li>
+</ul>
+<h4 id="email-rendering-tests">Email rendering tests</h4>
+<p>Update/add tests in <code>test/email.test.ts</code> or <code>test/markdown.test.ts</code>:</p>
+<ul>
+<li><code>renderEmailDocument</code> uses <code>email.outerPadding</code>.</li>
+<li>heading styles use theme heading tokens.</li>
+<li>table borders/cell padding/table header background use theme tokens.</li>
+<li>code/pre backgrounds use theme tokens.</li>
+<li>footnote section uses muted/small tokens.</li>
+</ul>
+<p>If testing <code>styleForElement</code> directly would require exporting internals, avoid that; use <code>renderMarkdown(...)</code> for output-level assertions.</p>
+<h4 id="cli-tests">CLI tests</h4>
+<p>Update <code>test/cli.test.ts</code>:</p>
+<ul>
+<li><code>--theme ./path/to/theme.toml</code> affects output.</li>
+<li><code>--theme name</code> loads from <code>themes/&lt;name&gt;.toml</code> relative to config base/cwd.</li>
+<li><code>--theme</code> overrides config-selected <code>[theme].extends</code>.</li>
+<li>missing <code>--theme</code> fails cleanly and includes the resolved path.</li>
+</ul>
+<p>Use temp directories to avoid depending on repository examples.</p>
+<h3 id="verification">10. Verification</h3>
+<p>Run:</p>
+<div class="sourceCode" id="cb38"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> test</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run typecheck</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run build</span></code></pre></div>
+<p>Manual checks:</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts examples/product-update.md <span class="at">--theme</span> examples/themes/newsletter.toml <span class="at">-o</span> examples/product-update-newsletter.html</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a><span class="ex">bun</span> run src/cli.ts examples/security-notice.md <span class="at">--theme</span> examples/themes/transactional.toml <span class="at">-o</span> examples/security-notice-transactional.html</span></code></pre></div>
+<p>Inspect generated HTML for:</p>
+<ul>
+<li>table wrapper remains intact.</li>
+<li>inline styles use theme colors/spacings.</li>
+<li>diagnostics still print for task lists/raw HTML/unsafe links.</li>
+<li>CSS injection values are rejected rather than emitted.</li>
+<li>no arbitrary CSS from theme files is emitted except mapped safe tokens.</li>
+</ul>
+<h2 id="files-likely-to-change">Files likely to change</h2>
+<div class="sourceCode" id="cb40"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>src/config.ts</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>src/cli.ts</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>src/email.ts</span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>mdtoemail.example.toml</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>README.md</span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>test/config.test.ts</span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>test/cli.test.ts</span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>test/email.test.ts</span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>test/markdown.test.ts</span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>examples/themes/minimal.toml</span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a>examples/themes/newsletter.toml</span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a>examples/themes/transactional.toml</span>
+<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a>examples/product-update-newsletter.html</span>
+<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a>examples/security-notice-transactional.html</span></code></pre></div>
+<p>Possible:</p>
+<div class="sourceCode" id="cb41"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>PROJECT.md</span></code></pre></div>
+<p>Only update <code>PROJECT.md</code> if needed to record the theming design.</p>
+<h2 id="interface-changes">Interface changes</h2>
+<p>New CLI option:</p>
+<div class="sourceCode" id="cb42"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>--theme &lt;name|file&gt;</span></code></pre></div>
+<p>New project config selector:</p>
+<div class="sourceCode" id="cb43"><pre class="sourceCode toml"><code class="sourceCode toml"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[theme]</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="dt">extends</span> <span class="op">=</span> <span class="st">&quot;newsletter&quot;</span></span></code></pre></div>
+<p>New reusable theme files:</p>
+<div class="sourceCode" id="cb44"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>themes/&lt;name&gt;.toml</span></code></pre></div>
+<p>or explicit paths passed to <code>--theme</code>.</p>
+<p>New config tokens under <code>[email]</code> and <code>[theme]</code> as listed above.</p>
+<h2 id="backward-compatibility">Backward compatibility</h2>
+<ul>
+<li>Existing config files remain valid.</li>
+<li>Existing <code>[theme]</code> values still work.</li>
+<li>Defaults are chosen to preserve existing output as closely as possible.</li>
+<li>Unknown keys in normal project config remain ignored for now.</li>
+<li>Theme files are stricter than project configs to prevent behavior overrides.</li>
+<li>Semicolon/control/function CSS injection values that may previously have been accepted as plain strings are now rejected for style tokens.</li>
+</ul>
+<h2 id="risks-edge-cases-and-mitigations">Risks, edge cases, and mitigations</h2>
+<h3 id="css-declaration-injection-through-token-values">CSS declaration injection through token values</h3>
+<p>Risk: A user-controlled token value containing <code>;</code> or <code>url(...)</code> could inject arbitrary CSS declarations into inline styles.</p>
+<p>Mitigation: Add required style value validation for all style tokens and tests for injection rejection.</p>
+<h3 id="toml-selectortable-conflict">TOML selector/table conflict</h3>
+<p>Risk: <code>theme = "newsletter"</code> cannot coexist with <code>[theme]</code>.</p>
+<p>Mitigation: Use <code>[theme].extends</code> for theme selection.</p>
+<h3 id="over-configurability-creates-email-unsafe-css">Over-configurability creates email-unsafe CSS</h3>
+<p>Risk: Arbitrary CSS would let users generate invalid or poorly supported email output.</p>
+<p>Mitigation: Only support explicit safe tokens. Renderer owns property names and structure. Validate values.</p>
+<h3 id="theme-merge-order-surprises">Theme merge order surprises</h3>
+<p>Risk: Users may expect local config values to override selected theme values.</p>
+<p>Mitigation: Use defaults -&gt; theme file -&gt; project config -&gt; CLI overrides, and document it.</p>
+<h3 id="path-resolution-confusion">Path resolution confusion</h3>
+<p>Risk: Named theme vs path-like theme resolution can be unclear.</p>
+<p>Mitigation: Resolve both relative to config base/cwd consistently, document rules, and test them.</p>
+<h3 id="theme-file-behavior-overrides">Theme file behavior overrides</h3>
+<p>Risk: A theme file could silently disable warnings or strict mode.</p>
+<p>Mitigation: Reject <code>[markdown]</code>, <code>email.warnings</code>, <code>email.strict</code>, and <code>[theme].extends</code> in theme files.</p>
+<h3 id="token-set-size">Token set size</h3>
+<p>Risk: Many tokens make <code>Config</code> and <code>config.ts</code> verbose.</p>
+<p>Mitigation: Use declarative mapping tables for homogeneous theme string fields. Keep renderer token usage straightforward.</p>
+<h3 id="no-full-semantic-css-validation-yet">No full semantic CSS validation yet</h3>
+<p>Risk: Users can provide semantically invalid but syntactically safe values like <code>font_size = "banana"</code>.</p>
+<p>Mitigation: This is acceptable for this milestone; email clients will ignore invalid property values. Block injection and dangerous functions now; add stricter per-token validators later if needed.</p>
+<h2 id="alternatives-considered">Alternatives considered</h2>
+<h3 id="only-use---config-theme.toml">1. Only use <code>--config theme.toml</code></h3>
+<p>Rejected. It mixes behavior config and appearance config and makes it harder to combine project behavior with reusable themes.</p>
+<h3 id="root-level-theme-newsletter">2. Root-level <code>theme = "newsletter"</code></h3>
+<p>Rejected because it conflicts with the existing <code>[theme]</code> table in TOML.</p>
+<h3 id="arbitrary-styles.h1-maps">3. Arbitrary <code>[styles.h1]</code> maps</h3>
+<p>Rejected. It is powerful but can easily produce email-unsafe CSS and requires more validation and documentation.</p>
+<h3 id="built-in-runtime-theme-presets">4. Built-in runtime theme presets</h3>
+<p>Rejected for this milestone. Example TOML files are simpler, transparent, and user-editable. Runtime presets can be added later if needed.</p>
+<h3 id="global-theme-directory-lookup">5. Global theme directory lookup</h3>
+<p>Rejected for this milestone. <code>~/.config/mdtoemail/themes</code> adds platform/path complexity and precedence questions. Project-local themes are enough for now.</p>
+<h3 id="duplicate-default-theme-file">6. Duplicate default theme file</h3>
+<p>Rejected. It would duplicate <code>defaultConfig</code> and risk drift. Built-in defaults are the default theme.</p>
+<h2 id="claude-review-notes-incorporated">Claude review notes incorporated</h2>
+<p>The draft plan was reviewed with Claude CLI. Useful feedback incorporated:</p>
+<ul>
+<li>Added required CSS token value validation to prevent semicolon/function-based style injection.</li>
+<li>Added <code>tableHeaderBackground</code> instead of coupling table header background to <code>codeBackground</code>.</li>
+<li>Ensured <code>mutedTextColor</code> and <code>smallFontSize</code> have a render site via footnote section styling.</li>
+<li>Explicitly listed style choices that remain hardcoded.</li>
+<li>Required <code>mergeConfig(raw, base)</code> to clone the provided base.</li>
+<li>Switched fully to an options-object <code>loadConfig(...)</code> API instead of dual overloads.</li>
+<li>Made relative theme path resolution consistent against config base/cwd.</li>
+<li>Rejected theme-file <code>extends</code> to avoid unplanned theme chaining.</li>
+<li>Removed duplicate <code>default.toml</code> example theme to avoid a second source of truth.</li>
+<li>Recommended declarative theme field mappings to avoid excessive repetitive <code>setString(...)</code> calls.</li>
+<li>Added tests for CSS injection rejection and theme-file restrictions.</li>
+</ul>
+<h2 id="open-questions">Open questions</h2>
+<p>None requiring user input.</p>
+<p>Implementation assumptions:</p>
+<ul>
+<li>Reusable themes are TOML files.</li>
+<li>Project config selects a theme via <code>[theme].extends</code>.</li>
+<li><code>--theme</code> overrides <code>[theme].extends</code>.</li>
+<li>Theme files are appearance/layout-only.</li>
+<li>Style token values receive safety validation but not full semantic CSS validation.</li>
+</ul>
+</article>
+  <script>
+(() => {
+  function normalizePreviewAnnotationLabel(text) {
+    return String(text || "")
+      .replace(/\r\n/g, "\n")
+      .replace(/\s*\n\s*/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+
+  function advancePastBacktickSpan(source, startIndex) {
+    let fenceLength = 1;
+    while (source[startIndex + fenceLength] === "`") fenceLength += 1;
+
+    let index = startIndex + fenceLength;
+    while (index < source.length) {
+      const ch = source[index];
+      if (ch === "\\") {
+        index = Math.min(source.length, index + 2);
+        continue;
+      }
+      if (ch === "`") {
+        let runLength = 1;
+        while (source[index + runLength] === "`") runLength += 1;
+        if (runLength === fenceLength) {
+          return index + runLength;
+        }
+        index += runLength;
+        continue;
+      }
+      if (ch === "\n") {
+        return index + 1;
+      }
+      index += 1;
+    }
+
+    return source.length;
+  }
+
+  function readInlineAnnotationMarkerAt(source, startIndex) {
+    const text = String(source || "");
+    if (startIndex < 0 || startIndex + 4 > text.length) return null;
+    if (text[startIndex] !== "[" || text.slice(startIndex, startIndex + 4).toLowerCase() !== "[an:") {
+      return null;
+    }
+
+    let index = startIndex + 4;
+    while (index < text.length && /\s/.test(text[index])) index += 1;
+    const bodyStart = index;
+    let squareDepth = 0;
+
+    while (index < text.length) {
+      const ch = text[index];
+      if (ch === "\\") {
+        index = Math.min(text.length, index + 2);
+        continue;
+      }
+      if (ch === "`") {
+        index = advancePastBacktickSpan(text, index);
+        continue;
+      }
+      if (ch === "[") {
+        squareDepth += 1;
+        index += 1;
+        continue;
+      }
+      if (ch === "]") {
+        if (squareDepth === 0) {
+          const end = index + 1;
+          return {
+            start: startIndex,
+            end: end,
+            raw: text.slice(startIndex, end),
+            body: text.slice(bodyStart, index),
+          };
+        }
+        squareDepth -= 1;
+        index += 1;
+        continue;
+      }
+      index += 1;
+    }
+
+    return null;
+  }
+
+  function collectInlineAnnotationMarkers(text) {
+    const source = String(text || "");
+    const markers = [];
+    let index = 0;
+
+    while (index < source.length) {
+      const ch = source[index];
+      if (ch === "\\") {
+        index = Math.min(source.length, index + 2);
+        continue;
+      }
+      if (ch === "`") {
+        index = advancePastBacktickSpan(source, index);
+        continue;
+      }
+      if (ch === "[" && source.slice(index, index + 4).toLowerCase() === "[an:") {
+        const marker = readInlineAnnotationMarkerAt(source, index);
+        if (marker) {
+          markers.push(marker);
+          index = marker.end;
+          continue;
+        }
+      }
+      index += 1;
+    }
+
+    return markers;
+  }
+
+  function replaceInlineAnnotationMarkers(text, annotationReplacer, textReplacer) {
+    const source = String(text || "");
+    const markers = collectInlineAnnotationMarkers(source);
+    const replaceAnnotation = typeof annotationReplacer === "function"
+      ? annotationReplacer
+      : function(marker) { return marker.raw; };
+    const replaceText = typeof textReplacer === "function"
+      ? textReplacer
+      : function(segment) { return segment; };
+
+    if (markers.length === 0) {
+      return replaceText(source);
+    }
+
+    let out = "";
+    let lastIndex = 0;
+    markers.forEach(function(marker) {
+      if (marker.start > lastIndex) {
+        out += String(replaceText(source.slice(lastIndex, marker.start)) ?? "");
+      }
+      out += String(replaceAnnotation(marker) ?? "");
+      lastIndex = marker.end;
+    });
+    if (lastIndex < source.length) {
+      out += String(replaceText(source.slice(lastIndex)) ?? "");
+    }
+    return out;
+  }
+
+  function escapeHtml(text) {
+    return String(text || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function isWordChar(ch) {
+    return typeof ch === "string" && /[A-Za-z0-9]/.test(ch);
+  }
+
+  function readInlineMarkdownLinkAt(source, startIndex) {
+    const text = String(source || "");
+    if (text[startIndex] !== "[") return null;
+
+    let index = startIndex + 1;
+    let squareDepth = 0;
+    while (index < text.length) {
+      const ch = text[index];
+      if (ch === "\\") {
+        index = Math.min(text.length, index + 2);
+        continue;
+      }
+      if (ch === "`") {
+        index = advancePastBacktickSpan(text, index);
+        continue;
+      }
+      if (ch === "[") {
+        squareDepth += 1;
+        index += 1;
+        continue;
+      }
+      if (ch === "]") {
+        if (squareDepth === 0) break;
+        squareDepth -= 1;
+        index += 1;
+        continue;
+      }
+      if (ch === "\n") return null;
+      index += 1;
+    }
+
+    if (index >= text.length || text[index] !== "]" || text[index + 1] !== "(") return null;
+
+    index += 2;
+    let parenDepth = 0;
+    while (index < text.length) {
+      const ch = text[index];
+      if (ch === "\\") {
+        index = Math.min(text.length, index + 2);
+        continue;
+      }
+      if (ch === "`") {
+        index = advancePastBacktickSpan(text, index);
+        continue;
+      }
+      if (ch === "(") {
+        parenDepth += 1;
+        index += 1;
+        continue;
+      }
+      if (ch === ")") {
+        if (parenDepth === 0) {
+          return {
+            type: "literal",
+            raw: text.slice(startIndex, index + 1),
+            end: index + 1,
+          };
+        }
+        parenDepth -= 1;
+        index += 1;
+        continue;
+      }
+      if (ch === "\n") return null;
+      index += 1;
+    }
+
+    return null;
+  }
+
+  function readDelimitedPreviewTokenAt(source, startIndex, open, close, allowNewlines) {
+    const text = String(source || "");
+    if (text.slice(startIndex, startIndex + open.length) !== open) return null;
+
+    let index = startIndex + open.length;
+    while (index < text.length) {
+      const ch = text[index];
+      if (!allowNewlines && ch === "\n") return null;
+      if (ch === "\\") {
+        index = Math.min(text.length, index + 2);
+        continue;
+      }
+      if (text.slice(index, index + close.length) === close) {
+        return {
+          type: "math",
+          raw: text.slice(startIndex, index + close.length),
+          end: index + close.length,
+        };
+      }
+      index += 1;
+    }
+
+    return null;
+  }
+
+  function readInlineMathTokenAt(source, startIndex) {
+    const text = String(source || "");
+    if (text[startIndex] === "\\" && text[startIndex + 1] === "(") {
+      return readDelimitedPreviewTokenAt(text, startIndex, "\\(", "\\)", true);
+    }
+    if (text[startIndex] === "\\" && text[startIndex + 1] === "[") {
+      return readDelimitedPreviewTokenAt(text, startIndex, "\\[", "\\]", true);
+    }
+    if (text[startIndex] === "$" && text[startIndex + 1] === "$") {
+      return readDelimitedPreviewTokenAt(text, startIndex, "$$", "$$", true);
+    }
+    if (text[startIndex] === "$" && text[startIndex + 1] !== "$" && text[startIndex + 1] && !/\s/.test(text[startIndex + 1])) {
+      const token = readDelimitedPreviewTokenAt(text, startIndex, "$", "$", false);
+      if (token && token.raw.length > 2) return token;
+    }
+    return null;
+  }
+
+  function readBareUrlTokenAt(source, startIndex) {
+    const text = String(source || "").slice(startIndex);
+    const match = text.match(/^https?:\/\/[^\s<]+/i);
+    if (!match) return null;
+    return {
+      type: "literal",
+      raw: match[0],
+      end: startIndex + match[0].length,
+    };
+  }
+
+  function readAnnotationPreviewProtectedTokenAt(source, startIndex) {
+    const text = String(source || "");
+    if (startIndex < 0 || startIndex >= text.length) return null;
+
+    if (text[startIndex] === "`") {
+      const end = advancePastBacktickSpan(text, startIndex);
+      return {
+        type: "code",
+        raw: text.slice(startIndex, end),
+        end: end,
+      };
+    }
+
+    const linkToken = text[startIndex] === "["
+      ? readInlineMarkdownLinkAt(text, startIndex)
+      : null;
+    if (linkToken) return linkToken;
+
+    const mathToken = (text[startIndex] === "$" || text[startIndex] === "\\")
+      ? readInlineMathTokenAt(text, startIndex)
+      : null;
+    if (mathToken) return mathToken;
+
+    const urlToken = text[startIndex].toLowerCase() === "h"
+      ? readBareUrlTokenAt(text, startIndex)
+      : null;
+    if (urlToken) return urlToken;
+
+    return null;
+  }
+
+  function canOpenEmphasisDelimiter(source, startIndex, delimiter) {
+    const text = String(source || "");
+    if (text.slice(startIndex, startIndex + delimiter.length) !== delimiter) return false;
+    const prev = startIndex > 0 ? text[startIndex - 1] : "";
+    const next = text[startIndex + delimiter.length] || "";
+    if (!next || /\s/.test(next)) return false;
+    return !isWordChar(prev);
+  }
+
+  function canCloseEmphasisDelimiter(source, startIndex, delimiter) {
+    const text = String(source || "");
+    if (text.slice(startIndex, startIndex + delimiter.length) !== delimiter) return false;
+    const prev = startIndex > 0 ? text[startIndex - 1] : "";
+    const next = text[startIndex + delimiter.length] || "";
+    if (!prev || /\s/.test(prev)) return false;
+    return !isWordChar(next);
+  }
+
+  function readAnnotationEmphasisSpanAt(source, startIndex, delimiter, tagName) {
+    const text = String(source || "");
+    if (!canOpenEmphasisDelimiter(text, startIndex, delimiter)) return null;
+
+    let index = startIndex + delimiter.length;
+    while (index < text.length) {
+      if (text[index] === "\\") {
+        index = Math.min(text.length, index + 2);
+        continue;
+      }
+
+      const protectedToken = readAnnotationPreviewProtectedTokenAt(text, index);
+      if (protectedToken) {
+        index = protectedToken.end;
+        continue;
+      }
+
+      if (canCloseEmphasisDelimiter(text, index, delimiter)) {
+        const inner = text.slice(startIndex + delimiter.length, index);
+        return {
+          end: index + delimiter.length,
+          html: "<" + tagName + ">" + renderAnnotationPlainTextHtml(inner) + "</" + tagName + ">",
+        };
+      }
+
+      index += 1;
+    }
+
+    return null;
+  }
+
+  function renderAnnotationCodeSpanHtml(rawToken) {
+    const raw = String(rawToken || "");
+    if (!raw || raw[0] !== "`") return escapeHtml(raw);
+
+    let fenceLength = 1;
+    while (raw[fenceLength] === "`") fenceLength += 1;
+    const fence = "`".repeat(fenceLength);
+    if (raw.length < fenceLength * 2 || raw.slice(raw.length - fenceLength) !== fence) {
+      return escapeHtml(raw);
+    }
+
+    return "<code>" + escapeHtml(raw.slice(fenceLength, raw.length - fenceLength)) + "</code>";
+  }
+
+  function renderAnnotationPlainTextHtml(text) {
+    const source = String(text || "");
+    let out = "";
+    let index = 0;
+
+    while (index < source.length) {
+      const strongMatch = readAnnotationEmphasisSpanAt(source, index, "**", "strong")
+        || readAnnotationEmphasisSpanAt(source, index, "__", "strong");
+      if (strongMatch) {
+        out += strongMatch.html;
+        index = strongMatch.end;
+        continue;
+      }
+
+      const emphasisMatch = readAnnotationEmphasisSpanAt(source, index, "*", "em")
+        || readAnnotationEmphasisSpanAt(source, index, "_", "em");
+      if (emphasisMatch) {
+        out += emphasisMatch.html;
+        index = emphasisMatch.end;
+        continue;
+      }
+
+      out += escapeHtml(source[index]);
+      index += 1;
+    }
+
+    return out;
+  }
+
+  function renderPreviewAnnotationHtml(text) {
+    const source = normalizePreviewAnnotationLabel(text);
+    let out = "";
+    let plainStart = 0;
+    let index = 0;
+
+    while (index < source.length) {
+      const token = readAnnotationPreviewProtectedTokenAt(source, index);
+      if (!token) {
+        index += 1;
+        continue;
+      }
+
+      if (index > plainStart) {
+        out += renderAnnotationPlainTextHtml(source.slice(plainStart, index));
+      }
+
+      if (token.type === "code") {
+        out += renderAnnotationCodeSpanHtml(token.raw);
+      } else {
+        out += escapeHtml(token.raw);
+      }
+
+      index = token.end;
+      plainStart = index;
+    }
+
+    if (plainStart < source.length) {
+      out += renderAnnotationPlainTextHtml(source.slice(plainStart));
+    }
+
+    return out;
+  }
+
+  function transformMarkdownOutsideFences(text, plainTransformer) {
+    const source = String(text || "").replace(/\r\n/g, "\n");
+    if (!source) return source;
+
+    const transformPlain = typeof plainTransformer === "function"
+      ? plainTransformer
+      : function(segment) { return segment; };
+    const lines = source.split("\n");
+    const out = [];
+    let plainBuffer = [];
+    let inFence = false;
+    let fenceChar = null;
+    let fenceLength = 0;
+
+    function flushPlain() {
+      if (plainBuffer.length === 0) return;
+      const transformed = transformPlain(plainBuffer.join("\n"));
+      out.push(typeof transformed === "string" ? transformed : String(transformed ?? ""));
+      plainBuffer = [];
+    }
+
+    lines.forEach(function(line) {
+      const trimmed = line.trimStart();
+      const fenceMatch = trimmed.match(/^(`{3,}|~{3,})/);
+      if (fenceMatch) {
+        const marker = fenceMatch[1] || "";
+        const markerChar = marker.charAt(0);
+        const markerLength = marker.length;
+
+        if (!inFence) {
+          flushPlain();
+          inFence = true;
+          fenceChar = markerChar;
+          fenceLength = markerLength;
+          out.push(line);
+          return;
+        }
+
+        if (fenceChar === markerChar && markerLength >= fenceLength) {
+          inFence = false;
+          fenceChar = null;
+          fenceLength = 0;
+        }
+
+        out.push(line);
+        return;
+      }
+
+      if (inFence) {
+        out.push(line);
+      } else {
+        plainBuffer.push(line);
+      }
+    });
+
+    flushPlain();
+    return out.join("\n");
+  }
+
+  function hasAnnotationMarkers(text) {
+    let found = false;
+    transformMarkdownOutsideFences(text, function(segment) {
+      if (!found && collectInlineAnnotationMarkers(segment).length > 0) {
+        found = true;
+      }
+      return segment;
+    });
+    return found;
+  }
+
+  function stripAnnotationMarkers(text) {
+    return transformMarkdownOutsideFences(text, function(segment) {
+      return replaceInlineAnnotationMarkers(segment, function() { return ""; });
+    });
+  }
+
+  function prepareMarkdownForPandocPreview(markdown, placeholderPrefix) {
+    const placeholders = [];
+    const prefix = typeof placeholderPrefix === "string" && placeholderPrefix
+      ? placeholderPrefix
+      : "PIMDANNOT";
+    const prepared = transformMarkdownOutsideFences(markdown, function(segment) {
+      return replaceInlineAnnotationMarkers(segment, function(marker) {
+        const label = normalizePreviewAnnotationLabel(marker.body);
+        if (!label) return "";
+        const token = prefix + placeholders.length + "TOKEN";
+        placeholders.push({ token: token, text: label, title: "[an: " + label + "]" });
+        return token;
+      });
+    });
+    return { markdown: prepared, placeholders: placeholders };
+  }
+
+  const helpers = Object.freeze({
+    collectInlineAnnotationMarkers: collectInlineAnnotationMarkers,
+    hasAnnotationMarkers: hasAnnotationMarkers,
+    normalizePreviewAnnotationLabel: normalizePreviewAnnotationLabel,
+    prepareMarkdownForPandocPreview: prepareMarkdownForPandocPreview,
+    readInlineAnnotationMarkerAt: readInlineAnnotationMarkerAt,
+    renderPreviewAnnotationHtml: renderPreviewAnnotationHtml,
+    replaceInlineAnnotationMarkers: replaceInlineAnnotationMarkers,
+    stripAnnotationMarkers: stripAnnotationMarkers,
+    transformMarkdownOutsideFences: transformMarkdownOutsideFences,
+  });
+
+  globalThis.PiMarkdownPreviewAnnotationHelpers = helpers;
+})();
+
+  </script>
+  <script type="module">
+  (async () => {
+    const annotationHelpers = window.PiMarkdownPreviewAnnotationHelpers || null;
+    const previewAnnotationPlaceholders = [];
+    const DIFF_META_LINE_REGEX = /^(diff --git |index |new file mode |deleted file mode |similarity index |rename from |rename to |Binary files )/;
+
+    const escapeRegExp = (text) => {
+      const backslash = String.fromCharCode(92);
+      const specials = '.+*?^' + '$' + '{}|[]' + backslash;
+      return Array.from(String(text || '')).map((ch) => specials.includes(ch) ? backslash + ch : ch).join('');
+    };
+
+    const setAnnotationMarkerContent = (marker, text) => {
+      if (!(marker instanceof HTMLElement)) return;
+      const rendered = annotationHelpers && typeof annotationHelpers.renderPreviewAnnotationHtml === 'function'
+        ? annotationHelpers.renderPreviewAnnotationHtml(text)
+        : String(text || '');
+      marker.innerHTML = rendered;
+    };
+
+    const replaceAnnotationTextNode = (textNode) => {
+      if (!annotationHelpers || typeof annotationHelpers.collectInlineAnnotationMarkers !== 'function') return;
+      const text = typeof textNode.nodeValue === 'string' ? textNode.nodeValue : '';
+      if (!text || text.toLowerCase().indexOf('[an:') === -1) return;
+
+      const markers = annotationHelpers.collectInlineAnnotationMarkers(text);
+      if (!Array.isArray(markers) || markers.length === 0) return;
+
+      const fragment = document.createDocumentFragment();
+      let lastIndex = 0;
+      markers.forEach((markerInfo) => {
+        const token = markerInfo && typeof markerInfo.raw === 'string' ? markerInfo.raw : '';
+        const start = markerInfo && typeof markerInfo.start === 'number' ? markerInfo.start : lastIndex;
+        const end = markerInfo && typeof markerInfo.end === 'number' ? markerInfo.end : start;
+        if (start > lastIndex) {
+          fragment.appendChild(document.createTextNode(text.slice(lastIndex, start)));
+        }
+
+        const markerText = annotationHelpers && typeof annotationHelpers.normalizePreviewAnnotationLabel === 'function'
+          ? annotationHelpers.normalizePreviewAnnotationLabel(markerInfo.body)
+          : String(markerInfo && markerInfo.body || '').trim();
+        if (markerText) {
+          const markerEl = document.createElement('span');
+          markerEl.className = 'annotation-marker';
+          markerEl.title = token || markerText;
+          setAnnotationMarkerContent(markerEl, markerText);
+          fragment.appendChild(markerEl);
+        }
+
+        lastIndex = end;
+      });
+
+      if (lastIndex < text.length) {
+        fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+      }
+
+      if (textNode.parentNode) {
+        textNode.parentNode.replaceChild(fragment, textNode);
+      }
+    };
+
+    const applyPreviewAnnotationPlaceholders = (root) => {
+      if (!root || !Array.isArray(previewAnnotationPlaceholders) || previewAnnotationPlaceholders.length === 0) return;
+      const placeholderMap = new Map();
+      const placeholderTokens = [];
+      previewAnnotationPlaceholders.forEach((entry) => {
+        const token = entry && typeof entry.token === 'string' ? entry.token : '';
+        if (!token) return;
+        placeholderMap.set(token, entry);
+        placeholderTokens.push(token);
+      });
+      if (placeholderTokens.length === 0) return;
+
+      const placeholderPattern = new RegExp(placeholderTokens.map(escapeRegExp).join('|'), 'g');
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const textNodes = [];
+      let node = walker.nextNode();
+      while (node) {
+        const textNode = node;
+        const value = typeof textNode.nodeValue === 'string' ? textNode.nodeValue : '';
+        if (value && value.indexOf('PIMDPREVIEWANNOT') !== -1) {
+          const parent = textNode.parentElement;
+          const tag = parent && parent.tagName ? parent.tagName.toUpperCase() : '';
+          if (tag !== 'CODE' && tag !== 'PRE' && tag !== 'SCRIPT' && tag !== 'STYLE' && tag !== 'TEXTAREA') {
+            textNodes.push(textNode);
+          }
+        }
+        node = walker.nextNode();
+      }
+
+      textNodes.forEach((textNode) => {
+        const text = typeof textNode.nodeValue === 'string' ? textNode.nodeValue : '';
+        if (!text) return;
+        placeholderPattern.lastIndex = 0;
+        if (!placeholderPattern.test(text)) return;
+        placeholderPattern.lastIndex = 0;
+
+        const fragment = document.createDocumentFragment();
+        let lastIndex = 0;
+        let match;
+        while ((match = placeholderPattern.exec(text)) !== null) {
+          const token = match[0] || '';
+          const entry = placeholderMap.get(token);
+          const start = typeof match.index === 'number' ? match.index : 0;
+          if (start > lastIndex) {
+            fragment.appendChild(document.createTextNode(text.slice(lastIndex, start)));
+          }
+          if (entry) {
+            const markerEl = document.createElement('span');
+            markerEl.className = 'annotation-marker';
+            const markerText = typeof entry.text === 'string' ? entry.text : token;
+            markerEl.title = typeof entry.title === 'string' ? entry.title : markerText;
+            setAnnotationMarkerContent(markerEl, markerText);
+            fragment.appendChild(markerEl);
+          } else {
+            fragment.appendChild(document.createTextNode(token));
+          }
+          lastIndex = start + token.length;
+          if (token.length === 0) {
+            placeholderPattern.lastIndex += 1;
+          }
+        }
+
+        if (lastIndex < text.length) {
+          fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+        }
+
+        if (textNode.parentNode) {
+          textNode.parentNode.replaceChild(fragment, textNode);
+        }
+      });
+    };
+
+    const decorateDiffCodeBlocks = (root) => {
+      if (!root) return;
+      const diffBlocks = Array.from(root.querySelectorAll('pre.sourceCode.diff code'));
+
+      diffBlocks.forEach((codeBlock) => {
+        const lineElements = Array.from(codeBlock.children).filter((child) => child instanceof HTMLElement);
+        lineElements.forEach((lineEl) => {
+          const text = typeof lineEl.textContent === 'string' ? lineEl.textContent : '';
+          if (!text) return;
+
+          if (/^\+(?!\+\+)/.test(text)) {
+            lineEl.classList.add('diff-line', 'diff-add-line');
+          } else if (/^-(?!--)/.test(text)) {
+            lineEl.classList.add('diff-line', 'diff-del-line');
+          } else if (/^@@/.test(text)) {
+            lineEl.classList.add('diff-line', 'diff-hunk-line');
+          } else if (/^(?:\+\+\+ |--- )/.test(text)) {
+            lineEl.classList.add('diff-line', 'diff-header-line');
+          } else if (DIFF_META_LINE_REGEX.test(text)) {
+            lineEl.classList.add('diff-line', 'diff-meta-line');
+          }
+
+          const walker = document.createTreeWalker(lineEl, NodeFilter.SHOW_TEXT);
+          const matches = [];
+          let node = walker.nextNode();
+          while (node) {
+            const textNode = node;
+            const value = typeof textNode.nodeValue === 'string' ? textNode.nodeValue : '';
+            const parent = textNode.parentElement;
+            if (value && value.toLowerCase().indexOf('[an:') !== -1 && parent && !parent.closest('a, .annotation-marker')) {
+              matches.push(textNode);
+            }
+            node = walker.nextNode();
+          }
+
+          matches.forEach(replaceAnnotationTextNode);
+        });
+      });
+    };
+
+    const MATHJAX_CDN_URL = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js';
+
+    const waitForFonts = async () => {
+      if ('fonts' in document) {
+        try {
+          await document.fonts.ready;
+        } catch {}
+      }
+    };
+
+    const waitForPaint = async () => {
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    };
+
+    const extractMathFallbackTex = (text, displayMode) => {
+      const source = typeof text === 'string' ? text.trim() : '';
+      if (!source) return '';
+
+      if (displayMode) {
+        if (source.startsWith('$$') && source.endsWith('$$') && source.length >= 4) {
+          return source.slice(2, -2).trim();
+        }
+        if (source.startsWith('\\[') && source.endsWith('\\]') && source.length >= 4) {
+          return source.slice(2, -2).trim();
+        }
+        return source;
+      }
+
+      if (source.startsWith('\\(') && source.endsWith('\\)') && source.length >= 4) {
+        return source.slice(2, -2).trim();
+      }
+      if (source.startsWith('$') && source.endsWith('$') && source.length >= 2) {
+        return source.slice(1, -1).trim();
+      }
+      return source;
+    };
+
+    const collectMathFallbackTargets = (root) => {
+      if (!root) return [];
+      const nodes = Array.from(root.querySelectorAll('.math.display, .math.inline'));
+      const targets = [];
+      const seenTargets = new Set();
+
+      nodes.forEach((node) => {
+        const displayMode = node.classList.contains('display');
+        const rawText = typeof node.textContent === 'string' ? node.textContent : '';
+        const tex = extractMathFallbackTex(rawText, displayMode);
+        if (!tex) return;
+
+        let renderTarget = node;
+        if (displayMode) {
+          const parent = node.parentElement;
+          const parentText = parent && typeof parent.textContent === 'string' ? parent.textContent.trim() : '';
+          if (parent && parent.tagName === 'P' && parentText === rawText.trim()) {
+            renderTarget = parent;
+          }
+        }
+
+        if (seenTargets.has(renderTarget)) return;
+        seenTargets.add(renderTarget);
+        targets.push({ renderTarget, displayMode, tex });
+      });
+
+      return targets;
+    };
+
+    let mathJaxPromise = null;
+    const ensureMathJax = () => {
+      if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+        return Promise.resolve(window.MathJax);
+      }
+      if (mathJaxPromise) return mathJaxPromise;
+
+      mathJaxPromise = new Promise((resolve, reject) => {
+        window.MathJax = {
+          loader: { load: ['[tex]/ams', '[tex]/noerrors', '[tex]/noundefined'] },
+          tex: {
+            inlineMath: [['\\(', '\\)'], ['$', '$']],
+            displayMath: [['\\[', '\\]'], ['$$', '$$']],
+            packages: { '[+]': ['ams', 'noerrors', 'noundefined'] },
+          },
+          options: {
+            skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+          },
+          startup: { typeset: false },
+        };
+
+        const script = document.createElement('script');
+        script.src = MATHJAX_CDN_URL;
+        script.async = true;
+        script.onload = () => {
+          const api = window.MathJax;
+          if (api && api.startup && api.startup.promise && typeof api.startup.promise.then === 'function') {
+            api.startup.promise.then(() => resolve(api)).catch(reject);
+            return;
+          }
+          if (api && typeof api.typesetPromise === 'function') {
+            resolve(api);
+            return;
+          }
+          reject(new Error('MathJax did not initialize.'));
+        };
+        script.onerror = () => reject(new Error('Failed to load MathJax.'));
+        document.head.appendChild(script);
+      }).catch((error) => {
+        mathJaxPromise = null;
+        throw error;
+      });
+
+      return mathJaxPromise;
+    };
+
+    const markerNeedsMath = (text) => {
+      const source = typeof text === 'string' ? text : '';
+      if (!source) return false;
+      const backslash = String.fromCharCode(92);
+      if (source.includes(backslash + '(') || source.includes(backslash + '[') || source.includes('$$')) return true;
+      for (let index = 0; index < source.length - 1; index += 1) {
+        const char = source[index];
+        const next = source[index + 1] || '';
+        if (char === '$' && next.trim() !== '') return true;
+        if (char === backslash && /[A-Za-z]/.test(next)) return true;
+      }
+      return false;
+    };
+
+    const renderAnnotationMarkerMath = async (root) => {
+      if (!root) return;
+      const markers = Array.from(root.querySelectorAll('.annotation-marker')).filter((marker) => {
+        if (!(marker instanceof HTMLElement)) return false;
+        if (marker.querySelector('math, mjx-container')) return false;
+        const text = typeof marker.textContent === 'string' ? marker.textContent : '';
+        return markerNeedsMath(text);
+      });
+      if (markers.length === 0) return;
+
+      let mathJax;
+      try {
+        mathJax = await ensureMathJax();
+      } catch (e) {
+        console.error('MathJax load failed:', e);
+        return;
+      }
+
+      try {
+        await mathJax.typesetPromise(markers);
+      } catch (e) {
+        console.error('Annotation math render failed:', e);
+      }
+    };
+
+    const renderMathFallback = async (root) => {
+      const fallbackTargets = collectMathFallbackTargets(root);
+      if (fallbackTargets.length === 0) return;
+
+      let mathJax;
+      try {
+        mathJax = await ensureMathJax();
+      } catch (e) {
+        console.error('MathJax load failed:', e);
+        return;
+      }
+
+      fallbackTargets.forEach(({ renderTarget, displayMode, tex }) => {
+        renderTarget.textContent = displayMode ? '\\[\n' + tex + '\n\\]' : '\\(' + tex + '\\)';
+      });
+
+      try {
+        await mathJax.typesetPromise(fallbackTargets.map(({ renderTarget }) => renderTarget));
+      } catch (e) {
+        console.error('MathJax render failed:', e);
+      }
+    };
+
+    const renderMermaid = async () => {
+      const mermaidBlocks = document.querySelectorAll('pre.mermaid');
+      if (mermaidBlocks.length === 0) return;
+
+      try {
+        const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+        mermaid.initialize({"startOnLoad":false,"theme":"base","themeVariables":{"background":"#1a1b21","primaryColor":"#25262f","primaryTextColor":"#d4d4d4","primaryBorderColor":"#808080","secondaryColor":"#1f2027","secondaryTextColor":"#d4d4d4","secondaryBorderColor":"#808080","tertiaryColor":"#1f2027","tertiaryTextColor":"#d4d4d4","tertiaryBorderColor":"#808080","lineColor":"#808080","textColor":"#d4d4d4","edgeLabelBackground":"#25262f","nodeBorder":"#808080","clusterBkg":"#1f2027","clusterBorder":"#808080","titleColor":"#f0c674"}});
+        mermaidBlocks.forEach(pre => {
+          const code = pre.querySelector('code');
+          const src = code ? code.textContent : pre.textContent;
+          const wrapper = document.createElement('div');
+          wrapper.className = 'mermaid-container';
+          const div = document.createElement('div');
+          div.className = 'mermaid';
+          div.textContent = src;
+          wrapper.appendChild(div);
+          pre.replaceWith(wrapper);
+        });
+        await mermaid.run();
+      } catch (e) {
+        console.error('Mermaid render failed:', e);
+      }
+    };
+
+    const root = document.getElementById('preview-root');
+    try {
+      await renderMermaid();
+      applyPreviewAnnotationPlaceholders(root);
+      decorateDiffCodeBlocks(root);
+      await renderAnnotationMarkerMath(root);
+      await renderMathFallback(root);
+      await waitForFonts();
+      await waitForPaint();
+    } finally {
+      window.__mermaidDone = true;
+    }
+  })();
+  </script>
+</body>
+</html>

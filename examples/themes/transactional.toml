@@ -1,0 +1,26 @@
+[email]
+container_width = 600
+outer_padding = "24px 12px"
+
+[theme]
+background_color = "#f3f4f6"
+container_background = "#ffffff"
+text_color = "#1f2937"
+heading_color = "#111827"
+muted_text_color = "#6b7280"
+link_color = "#1d4ed8"
+border_color = "#d1d5db"
+table_header_background = "#f3f4f6"
+code_background = "#f9fafb"
+blockquote_border_color = "#9ca3af"
+font_family = "Arial, Helvetica, sans-serif"
+code_font_family = "Consolas, Monaco, monospace"
+base_font_size = "16px"
+small_font_size = "13px"
+line_height = "1.5"
+content_padding = "32px"
+h1_font_size = "26px"
+h2_font_size = "22px"
+h3_font_size = "18px"
+paragraph_margin = "0 0 16px 0"
+table_cell_padding = "10px"

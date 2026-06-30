@@ -1,17 +1,13 @@
-import { defineMdastPlugin, markdownToHtml, type Features, type Frontmatter } from "satteri";
+import { markdownToHtml, type Features, type Frontmatter } from "satteri";
 import type { Config } from "./config";
+import { emailHastPlugin } from "./email";
+import type { Diagnostic } from "./diagnostics";
 
 export interface RenderedMarkdown {
   html: string;
   frontmatter: Frontmatter | null;
+  diagnostics: Diagnostic[];
 }
-
-const escapeRawHtml = defineMdastPlugin({
-  name: "escape-raw-html",
-  html(node) {
-    return { type: "text", value: node.value };
-  },
-});
 
 export function markdownFeatures(config: Config): Features {
   return {
@@ -21,13 +17,15 @@ export function markdownFeatures(config: Config): Features {
 }
 
 export async function renderMarkdown(markdown: string, config: Config): Promise<RenderedMarkdown> {
+  const diagnostics: Diagnostic[] = [];
   const result = await markdownToHtml(markdown, {
     features: markdownFeatures(config),
-    mdastPlugins: config.markdown.rawHtml ? [] : [escapeRawHtml],
+    hastPlugins: [emailHastPlugin(config, diagnostics)],
   });
 
   return {
     html: result.html,
     frontmatter: result.frontmatter,
+    diagnostics,
   };
 }

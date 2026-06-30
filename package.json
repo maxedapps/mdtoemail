@@ -2,6 +2,7 @@
   "name": "mdtoemail",
   "version": "0.1.0",
   "description": "Fast Markdown to conservative email-friendly HTML converter",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "mdtoemail": "./src/cli.ts"
@@ -10,8 +11,7 @@
     "dev": "bun run src/cli.ts",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit",
-    "build": "bun build ./src/cli.ts --target=bun --outdir=dist",
-    "compile": "bun build ./src/cli.ts --compile --outfile dist/mdtoemail"
+    "build": "bun build ./src/cli.ts --target=bun --outdir=dist"
   },
   "dependencies": {
     "satteri": "0.9.4"

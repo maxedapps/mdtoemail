@@ -1,21 +1,26 @@
 import { describe, expect, test } from "bun:test";
 import { defaultConfig, type Config } from "../src/config";
+import { countWarnings } from "../src/diagnostics";
 import { markdownFeatures, renderMarkdown } from "../src/markdown";
 
 describe("renderMarkdown", () => {
-  test("renders CommonMark basics", async () => {
+  test("renders and styles CommonMark basics", async () => {
     const rendered = await renderMarkdown("# Hello\n\nThis is **bold** and *emphasized*.", defaultConfig);
 
     expect(rendered.frontmatter).toBeNull();
-    expect(rendered.html).toContain("<h1>Hello</h1>");
+    expect(rendered.diagnostics).toEqual([]);
+    expect(rendered.html).toContain("<h1 style=");
+    expect(rendered.html).toContain(">Hello</h1>");
     expect(rendered.html).toContain("<strong>bold</strong>");
     expect(rendered.html).toContain("<em>emphasized</em>");
   });
 
-  test("renders links", async () => {
+  test("keeps safe links and adds link styles", async () => {
     const rendered = await renderMarkdown("[Site](https://example.com)", defaultConfig);
 
+    expect(rendered.diagnostics).toEqual([]);
     expect(rendered.html).toContain('href="https://example.com"');
+    expect(rendered.html).toContain(`style="color:${defaultConfig.theme.linkColor};text-decoration:underline"`);
     expect(rendered.html).toContain(">Site</a>");
   });
 
@@ -26,12 +31,22 @@ describe("renderMarkdown", () => {
     });
   });
 
-  test("renders GFM tables when enabled", async () => {
+  test("renders and styles GFM tables when enabled", async () => {
     const rendered = await renderMarkdown("| A | B |\n|---|---|\n| 1 | 2 |", defaultConfig);
 
-    expect(rendered.html).toContain("<table>");
-    expect(rendered.html).toContain("<th>A</th>");
-    expect(rendered.html).toContain("<td>2</td>");
+    expect(rendered.html).toContain("<table style=");
+    expect(rendered.html).toContain("<th style=");
+    expect(rendered.html).toContain(">A</th>");
+    expect(rendered.html).toContain("<td style=");
+    expect(rendered.html).toContain(">2</td>");
+    expect(rendered.html).toContain("border-collapse:collapse");
+  });
+
+  test("preserves GFM table alignment styles", async () => {
+    const rendered = await renderMarkdown("| A | B |\n|:--|--:|\n| 1 | 2 |", defaultConfig);
+
+    expect(rendered.html).toContain("text-align:left");
+    expect(rendered.html).toContain("text-align:right");
   });
 
   test("does not render GFM tables or strikethrough when GFM is disabled", async () => {
@@ -41,24 +56,35 @@ describe("renderMarkdown", () => {
     );
     const strikethrough = await renderMarkdown("~~x~~", withMarkdownConfig({ gfm: false }));
 
-    expect(table.html).not.toContain("<table>");
+    expect(table.html).not.toContain("<table");
     expect(table.html).toContain("| A | B |");
     expect(strikethrough.html).toContain("~~x~~");
     expect(strikethrough.html).not.toContain("<del>");
   });
 
-  test("documents current GFM task list output", async () => {
+  test("transforms GFM task-list inputs into text symbols", async () => {
     const rendered = await renderMarkdown("- [x] done\n- [ ] todo", defaultConfig);
 
-    expect(rendered.html).toContain("contains-task-list");
-    expect(rendered.html).toContain('type="checkbox"');
+    expect(rendered.diagnostics).toEqual([
+      {
+        code: "task-list-input-transformed",
+        severity: "info",
+        message: "Converted task-list checkbox inputs to plain text symbols for email compatibility.",
+      },
+    ]);
+    expect(countWarnings(rendered.diagnostics)).toBe(0);
+    expect(rendered.html).toContain("☑ ");
+    expect(rendered.html).toContain("☐ ");
+    expect(rendered.html).not.toContain("<input");
+    expect(rendered.html).not.toContain("contains-task-list");
+    expect(rendered.html).not.toContain("task-list-item");
   });
 
   test("extracts frontmatter when enabled", async () => {
     const rendered = await renderMarkdown("---\ntitle: Test\n---\n# Hi", defaultConfig);
 
     expect(rendered.frontmatter).toEqual({ kind: "yaml", value: "title: Test" });
-    expect(rendered.html).toContain("<h1>Hi</h1>");
+    expect(rendered.html).toContain(">Hi</h1>");
     expect(rendered.html).not.toContain("title: Test");
   });
 
@@ -69,29 +95,140 @@ describe("renderMarkdown", () => {
     );
 
     expect(rendered.frontmatter).toBeNull();
-    expect(rendered.html).toContain("<hr>");
-    expect(rendered.html).toContain("<h2>title: Test</h2>");
+    expect(rendered.html).toContain("<hr style=");
+    expect(rendered.html).toContain(">title: Test</h2>");
   });
 
-  test("escapes raw HTML by default", async () => {
-    const inline = await renderMarkdown("a <em>x</em> b", defaultConfig);
-    const block = await renderMarkdown("<script>alert(1)</script>", defaultConfig);
+  test("escapes raw HTML regardless of rawHtml config", async () => {
+    const disabled = await renderMarkdown("a <em>x</em> b", withMarkdownConfig({ rawHtml: false }));
+    const enabled = await renderMarkdown("<script>alert(1)</script>", withMarkdownConfig({ rawHtml: true }));
 
-    expect(inline.html).toContain("<p>a &lt;em&gt;x&lt;/em&gt; b</p>");
-    expect(block.html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
-    expect(block.html).not.toContain("<script>");
+    expect(disabled.diagnostics).toEqual([
+      {
+        code: "raw-html-escaped",
+        severity: "warning",
+        message: "Escaped raw HTML because arbitrary HTML is not supported in email-safe output.",
+      },
+    ]);
+    expect(enabled.diagnostics).toEqual(disabled.diagnostics);
+    expect(disabled.html).toContain("a &lt;em&gt;x&lt;/em&gt; b");
+    expect(enabled.html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
+    expect(enabled.html).not.toContain("<script>");
   });
 
-  test("passes raw HTML through when enabled", async () => {
-    const rendered = await renderMarkdown("<em>x</em>", withMarkdownConfig({ rawHtml: true }));
-
-    expect(rendered.html).toContain("<em>x</em>");
-  });
-
-  test("documents known URL sanitizer gap", async () => {
+  test("removes unsafe link URLs while preserving link text", async () => {
     const rendered = await renderMarkdown("[bad](javascript:alert(1))", defaultConfig);
 
-    expect(rendered.html).toContain('href="javascript:alert(1)"');
+    expect(rendered.diagnostics).toEqual([
+      {
+        code: "unsafe-link-url",
+        severity: "warning",
+        message: 'Removed unsafe link URL "javascript:alert(1)".',
+      },
+    ]);
+    expect(rendered.html).toContain(">bad</a>");
+    expect(rendered.html).not.toContain("javascript:");
+  });
+
+  test("rejects protocol-relative and obfuscated URLs", async () => {
+    const rendered = await renderMarkdown(
+      "[a](//example.com) [b](JAVASCRIPT:alert(1)) [c](java\tscript:alert(1))",
+      defaultConfig,
+    );
+
+    expect(rendered.html).not.toContain("href=");
+    expect(rendered.html).not.toContain("javascript:");
+    expect(rendered.html).not.toContain("//example.com");
+  });
+
+  test("validates image URLs", async () => {
+    const safe = await renderMarkdown("![Alt](https://example.com/a.png)", defaultConfig);
+    const unsafe = await renderMarkdown("![x](javascript:alert(1))", defaultConfig);
+
+    expect(safe.diagnostics).toEqual([]);
+    expect(unsafe.diagnostics).toEqual([
+      {
+        code: "unsafe-image-url",
+        severity: "warning",
+        message: 'Removed image with unsafe URL "javascript:alert(1)".',
+      },
+    ]);
+    expect(safe.html).toContain('<img src="https://example.com/a.png" alt="Alt" style=');
+    expect(unsafe.html).not.toContain("<img");
+    expect(unsafe.html).not.toContain("javascript:");
+  });
+
+  test("preserves footnote text and safe in-document ids", async () => {
+    const rendered = await renderMarkdown("Footnote[^1].\n\n[^1]: Note text.", defaultConfig);
+
+    expect(rendered.html).toContain("Note text.");
+    expect(rendered.html).toContain('href="#user-content-fn-1"');
+    expect(rendered.html).toContain('id="user-content-fn-1"');
+    expect(rendered.html).not.toContain('class="footnotes"');
+    expect(rendered.html).not.toContain("data-footnotes");
+  });
+
+  test("styles nested links and table cells", async () => {
+    const rendered = await renderMarkdown("- [Site](https://example.com)\n\n| A |\n|---|\n| [B](https://example.com/b) |", defaultConfig);
+
+    expect(rendered.html).toContain(`<a href="https://example.com" style="color:${defaultConfig.theme.linkColor};text-decoration:underline">Site</a>`);
+    expect(rendered.html).toContain("<td style=");
+    expect(rendered.html).toContain(`<a href="https://example.com/b" style="color:${defaultConfig.theme.linkColor};text-decoration:underline">B</a>`);
+  });
+
+  test("emits one raw HTML diagnostic for multiple raw nodes", async () => {
+    const rendered = await renderMarkdown("<em>a</em> <strong>b</strong>", defaultConfig);
+
+    expect(rendered.diagnostics).toHaveLength(1);
+    expect(rendered.diagnostics[0]?.code).toBe("raw-html-escaped");
+  });
+
+  test("keeps diagnostic order for unsafe links and images", async () => {
+    const rendered = await renderMarkdown(
+      "[bad](javascript:alert(1))\n\n![x](data:text/plain,x)",
+      defaultConfig,
+    );
+
+    expect(rendered.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      "unsafe-link-url",
+      "unsafe-image-url",
+    ]);
+  });
+
+  test("does not double-escape styles set by the HAST plugin", async () => {
+    const rendered = await renderMarkdown("[Site](https://example.com)", {
+      ...defaultConfig,
+      theme: {
+        ...defaultConfig.theme,
+        linkColor: 'rgb(0, "0", 0)',
+      },
+    });
+
+    expect(rendered.html).toContain('style="color:rgb(0, &quot;0&quot;, 0);text-decoration:underline"');
+    expect(rendered.html).not.toContain("&amp;#x22;");
+  });
+
+  test("uses expanded theme tokens in generated styles", async () => {
+    const rendered = await renderMarkdown("# Title\n\n| A |\n|---|\n| `B` |\n\nFootnote[^1].\n\n[^1]: Note.", {
+      ...defaultConfig,
+      theme: {
+        ...defaultConfig.theme,
+        headingColor: "#111111",
+        h1FontSize: "34px",
+        h1Margin: "1px 2px 3px 4px",
+        tableHeaderBackground: "#eeeeee",
+        tableCellPadding: "11px",
+        borderColor: "#cccccc",
+        codeBackground: "#fafafa",
+        mutedTextColor: "#777777",
+        smallFontSize: "12px",
+      },
+    });
+
+    expect(rendered.html).toContain('style="margin:1px 2px 3px 4px;color:#111111;font-size:34px;line-height:1.25;font-weight:700"');
+    expect(rendered.html).toContain('style="border:1px solid #cccccc;padding:11px;background:#eeeeee;color:#222222;font-weight:700"');
+    expect(rendered.html).toContain('background:#fafafa');
+    expect(rendered.html).toContain('style="margin:24px 0 0 0;padding:16px 0 0 0;border-top:1px solid #cccccc;color:#777777;font-size:12px"');
   });
 });
 

@@ -1,0 +1,13 @@
+[email]
+container_width = 580
+outer_padding = "28px 10px"
+
+[theme]
+extends = "transactional"
+link_color = "#0f766e"
+heading_color = "#134e4a"
+table_header_background = "#ccfbf1"
+code_background = "#f0fdfa"
+blockquote_border_color = "#14b8a6"
+h1_font_size = "28px"
+content_padding = "34px"
