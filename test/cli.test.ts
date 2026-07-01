@@ -100,13 +100,37 @@ describe("CLI", () => {
   });
 
   test("strict mode succeeds for info-only diagnostics", async () => {
-    const { input, output } = await writeInput("- [x] Done");
+    const { input, output } = await writeInput("- [x] Done\n\n![](https://example.com/a.png)\n\n[rel](/pricing)");
 
     const result = runCli(input, "--strict", "-o", output);
 
     expect(result.exitCode).toBe(0);
     expect(stderr(result)).toContain("Info [task-list-input-transformed]");
+    expect(stderr(result)).toContain("Info [missing-image-alt]");
+    expect(stderr(result)).toContain("Info [relative-link-url]");
     await expectFileExists(output);
+  });
+
+  test("prints new image/link diagnostics", async () => {
+    const { input, output } = await writeInput("[http](http://example.com)\n\n![Logo](./logo.png)");
+
+    const result = runCli(input, "-o", output);
+
+    expect(result.exitCode).toBe(0);
+    expect(stderr(result)).toContain("Warning [insecure-link-url]");
+    expect(stderr(result)).toContain("Warning [relative-image-url]");
+    expect(await readFile(output, "utf8")).toContain("[Image: Logo]");
+  });
+
+  test("--no-warnings suppresses diagnostics but strict still fails on warnings", async () => {
+    const { input, output } = await writeInput("[http](http://example.com)");
+
+    const result = runCli(input, "--strict", "--no-warnings", "-o", output);
+
+    expect(result.exitCode).not.toBe(0);
+    expect(stderr(result)).not.toContain("Warning [insecure-link-url]");
+    expect(stderr(result)).toContain("Strict mode failed with 1 warning(s).");
+    await expectFileMissing(output);
   });
 
   test("--theme path applies a TOML theme", async () => {

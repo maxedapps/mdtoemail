@@ -443,11 +443,20 @@ function validateStyleValue(value: string, label: string, prefix: "Invalid confi
     trimmed.includes("/*") ||
     trimmed.includes("*/") ||
     /url\s*\(/i.test(trimmed) ||
-    /expression\s*\(/i.test(trimmed)
+    /expression\s*\(/i.test(trimmed) ||
+    hasFragileEmailCss(trimmed)
   ) {
     throw new Error(`${prefix}: ${label} contains unsupported CSS characters or functions.`);
   }
   return trimmed;
+}
+
+function hasFragileEmailCss(value: string): boolean {
+  return (
+    /(?:^|[^a-z-])(var|calc|clamp|min|max|lab|lch|oklab|oklch|color)\s*\(/i.test(value) ||
+    /(?:^|[\s,(])[-+]?\d*\.?\d+(vw|vh|vmin|vmax|cqw|cqh|cqi|cqb|cqmin|cqmax)\b/i.test(value) ||
+    /\b(fit-content|min-content|max-content)\b/i.test(value)
+  );
 }
 
 function isValidationError(error: unknown): boolean {

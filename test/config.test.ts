@@ -165,12 +165,24 @@ describe("config", () => {
     );
   });
 
-  test("rejects unsafe CSS token values", () => {
+  test("rejects unsafe or fragile CSS token values", () => {
     expect(() => mergeConfig({ theme: { link_color: "blue; display:flex" } })).toThrow(
       "Invalid config: theme.link_color contains unsupported CSS characters or functions.",
     );
     expect(() => mergeConfig({ theme: { background_color: "url(https://example.com/x.png)" } })).toThrow(
       "Invalid config: theme.background_color contains unsupported CSS characters or functions.",
+    );
+    expect(() => mergeConfig({ theme: { content_padding: "calc(16px + 1vw)" } })).toThrow(
+      "Invalid config: theme.content_padding contains unsupported CSS characters or functions.",
+    );
+    expect(() => mergeConfig({ theme: { background_color: "oklch(60% 0.2 40)" } })).toThrow(
+      "Invalid config: theme.background_color contains unsupported CSS characters or functions.",
+    );
+    expect(() => mergeConfig({ theme: { h1_font_size: "clamp(24px, 5vw, 36px)" } })).toThrow(
+      "Invalid config: theme.h1_font_size contains unsupported CSS characters or functions.",
+    );
+    expect(() => mergeConfig({ theme: { table_margin: "1vw" } })).toThrow(
+      "Invalid config: theme.table_margin contains unsupported CSS characters or functions.",
     );
   });
 

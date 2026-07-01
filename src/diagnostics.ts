@@ -3,6 +3,11 @@ export type DiagnosticSeverity = "warning" | "info";
 export type DiagnosticCode =
   | "unsafe-link-url"
   | "unsafe-image-url"
+  | "insecure-link-url"
+  | "relative-link-url"
+  | "insecure-image-url"
+  | "relative-image-url"
+  | "missing-image-alt"
   | "unsupported-element"
   | "raw-html-escaped"
   | "task-list-input-transformed";

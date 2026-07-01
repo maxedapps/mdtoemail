@@ -1,7 +1,7 @@
 [markdown]
 gfm = true
 frontmatter = true
-# Reserved for future unsafe/raw HTML handling. Email-safe output currently escapes raw HTML either way.
+# Reserved for future unsafe/raw HTML handling. Email-safe output currently escapes raw HTML regardless of this value.
 raw_html = false
 
 [email]
@@ -13,6 +13,8 @@ strict = false
 [theme]
 # Optional reusable theme selected from ./themes/<name>.toml, unless --theme overrides it.
 # extends = "newsletter"
+# Keep tokens simple for older email clients. Avoid CSS functions such as var(), calc(), clamp(),
+# viewport/container units, URL values, comments, and custom CSS declarations.
 background_color = "#f4f4f4"
 container_background = "#ffffff"
 text_color = "#222222"

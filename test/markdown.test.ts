@@ -31,21 +31,26 @@ describe("renderMarkdown", () => {
     });
   });
 
-  test("renders and styles GFM tables when enabled", async () => {
+  test("renders and styles GFM tables with legacy attributes", async () => {
     const rendered = await renderMarkdown("| A | B |\n|---|---|\n| 1 | 2 |", defaultConfig);
 
-    expect(rendered.html).toContain("<table style=");
-    expect(rendered.html).toContain("<th style=");
-    expect(rendered.html).toContain(">A</th>");
-    expect(rendered.html).toContain("<td style=");
-    expect(rendered.html).toContain(">2</td>");
+    expect(rendered.html).toContain('<table width="100%" cellspacing="0" cellpadding="0" border="0" style=');
     expect(rendered.html).toContain("border-collapse:collapse");
+    expect(rendered.html).toContain("mso-table-lspace:0pt");
+    expect(rendered.html).toContain('<th align="left" valign="top" bgcolor="#f3f4f6" style=');
+    expect(rendered.html).toContain(">A</th>");
+    expect(rendered.html).toContain('<td align="left" valign="top" style=');
+    expect(rendered.html).toContain(">2</td>");
   });
 
-  test("preserves GFM table alignment styles", async () => {
-    const rendered = await renderMarkdown("| A | B |\n|:--|--:|\n| 1 | 2 |", defaultConfig);
+  test("preserves GFM table alignment as attributes and styles", async () => {
+    const rendered = await renderMarkdown("| A | B | C |\n|:--|:-:|--:|\n| 1 | 2 | 3 |", defaultConfig);
 
+    expect(rendered.html).toContain('align="left"');
+    expect(rendered.html).toContain('align="center"');
+    expect(rendered.html).toContain('align="right"');
     expect(rendered.html).toContain("text-align:left");
+    expect(rendered.html).toContain("text-align:center");
     expect(rendered.html).toContain("text-align:right");
   });
 
@@ -130,6 +135,18 @@ describe("renderMarkdown", () => {
     expect(rendered.html).not.toContain("javascript:");
   });
 
+  test("keeps HTTP and relative links with diagnostics", async () => {
+    const rendered = await renderMarkdown("[http](http://example.com) [rel](/pricing) [hash](#x)", defaultConfig);
+
+    expect(rendered.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      "insecure-link-url",
+      "relative-link-url",
+    ]);
+    expect(rendered.html).toContain('href="http://example.com"');
+    expect(rendered.html).toContain('href="/pricing"');
+    expect(rendered.html).toContain('href="#x"');
+  });
+
   test("rejects protocol-relative and obfuscated URLs", async () => {
     const rendered = await renderMarkdown(
       "[a](//example.com) [b](JAVASCRIPT:alert(1)) [c](java\tscript:alert(1))",
@@ -141,7 +158,7 @@ describe("renderMarkdown", () => {
     expect(rendered.html).not.toContain("//example.com");
   });
 
-  test("validates image URLs", async () => {
+  test("validates image URLs and emits safer image attributes", async () => {
     const safe = await renderMarkdown("![Alt](https://example.com/a.png)", defaultConfig);
     const unsafe = await renderMarkdown("![x](javascript:alert(1))", defaultConfig);
 
@@ -153,9 +170,37 @@ describe("renderMarkdown", () => {
         message: 'Removed image with unsafe URL "javascript:alert(1)".',
       },
     ]);
-    expect(safe.html).toContain('<img src="https://example.com/a.png" alt="Alt" style=');
+    expect(safe.html).toContain('<img src="https://example.com/a.png" alt="Alt" border="0" style=');
+    expect(safe.html).toContain("-ms-interpolation-mode:bicubic");
+    expect(unsafe.html).toContain("[Image: x]");
     expect(unsafe.html).not.toContain("<img");
     expect(unsafe.html).not.toContain("javascript:");
+  });
+
+  test("removes HTTP and relative images with fallback text", async () => {
+    const rendered = await renderMarkdown("![Logo](http://example.com/logo.png) ![Local](./logo.png)", defaultConfig);
+
+    expect(rendered.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      "insecure-image-url",
+      "relative-image-url",
+    ]);
+    expect(rendered.html).toContain("[Image: Logo]");
+    expect(rendered.html).toContain("[Image: Local]");
+    expect(rendered.html).not.toContain("<img");
+  });
+
+  test("emits info diagnostic for missing image alt text", async () => {
+    const rendered = await renderMarkdown("![](https://example.com/a.png)", defaultConfig);
+
+    expect(rendered.diagnostics).toEqual([
+      {
+        code: "missing-image-alt",
+        severity: "info",
+        message: "Image is missing alt text; emitted an empty alt attribute.",
+      },
+    ]);
+    expect(countWarnings(rendered.diagnostics)).toBe(0);
+    expect(rendered.html).toContain('alt=""');
   });
 
   test("preserves footnote text and safe in-document ids", async () => {
@@ -164,6 +209,8 @@ describe("renderMarkdown", () => {
     expect(rendered.html).toContain("Note text.");
     expect(rendered.html).toContain('href="#user-content-fn-1"');
     expect(rendered.html).toContain('id="user-content-fn-1"');
+    expect(rendered.html).toContain("<div style=\"margin:24px 0 0 0;padding:16px 0 0 0;border-top:1px solid #dddddd");
+    expect(rendered.html).not.toContain("<section");
     expect(rendered.html).not.toContain('class="footnotes"');
     expect(rendered.html).not.toContain("data-footnotes");
   });
@@ -172,7 +219,7 @@ describe("renderMarkdown", () => {
     const rendered = await renderMarkdown("- [Site](https://example.com)\n\n| A |\n|---|\n| [B](https://example.com/b) |", defaultConfig);
 
     expect(rendered.html).toContain(`<a href="https://example.com" style="color:${defaultConfig.theme.linkColor};text-decoration:underline">Site</a>`);
-    expect(rendered.html).toContain("<td style=");
+    expect(rendered.html).toContain('<td align="left" valign="top" style=');
     expect(rendered.html).toContain(`<a href="https://example.com/b" style="color:${defaultConfig.theme.linkColor};text-decoration:underline">B</a>`);
   });
 
@@ -226,9 +273,18 @@ describe("renderMarkdown", () => {
     });
 
     expect(rendered.html).toContain('style="margin:1px 2px 3px 4px;color:#111111;font-size:34px;line-height:1.25;font-weight:700"');
-    expect(rendered.html).toContain('style="border:1px solid #cccccc;padding:11px;background:#eeeeee;color:#222222;font-weight:700"');
+    expect(rendered.html).toContain('style="border:1px solid #cccccc;padding:11px;background:#eeeeee;color:#222222;font-weight:700;text-align:left"');
+    expect(rendered.html).toContain('bgcolor="#eeeeee"');
     expect(rendered.html).toContain('background:#fafafa');
     expect(rendered.html).toContain('style="margin:24px 0 0 0;padding:16px 0 0 0;border-top:1px solid #cccccc;color:#777777;font-size:12px"');
+  });
+
+  test("code blocks wrap instead of relying on scrollbars", async () => {
+    const rendered = await renderMarkdown("```ts\nconst value = 'very long line';\n```", defaultConfig);
+
+    expect(rendered.html).toContain("white-space:pre-wrap");
+    expect(rendered.html).toContain("overflow-wrap:break-word");
+    expect(rendered.html).not.toContain("overflow:auto");
   });
 });
 
