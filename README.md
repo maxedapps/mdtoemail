@@ -1,48 +1,69 @@
 # mdtoemail
 
-Fast Markdown to conservative, email-friendly HTML using TypeScript, Bun, and Sätteri.
+Fast Bun + TypeScript CLI for converting Markdown into conservative, email-friendly HTML.
 
-`mdtoemail` is a CLI-only converter: Markdown in, standalone HTML out. It does **not** send email, track opens/clicks, run a server, or manage provider webhooks.
+`mdtoemail` is intentionally narrow: **Markdown file in, standalone HTML file out**. It does not send email, track opens/clicks, run a server, manage webhooks, or handle provider-specific delivery concerns.
 
 ## Status
 
-Early development. The current implementation already renders Markdown through Sätteri, wraps it in a table-based email document, applies inline styles, sanitizes generated HTML, and reports diagnostics. The output is intentionally conservative, but real email-client testing is still required before relying on it for critical production campaigns.
+Early development, usable for experimentation. The converter currently:
 
-## Features
+- renders Markdown with pinned `satteri@0.9.4`
+- wraps output in a table-based email document
+- emits inline styles and legacy table attributes for broad client compatibility
+- sanitizes/normalizes generated HTML
+- supports safe TOML theme tokens and reusable theme files
+- reports diagnostics and supports strict mode
 
-- Bun + TypeScript CLI
-- Markdown rendering via pinned `satteri@0.9.4`
-- CommonMark basics and configurable GFM support
-- TOML configuration
-- Reusable TOML theme files plus safe theme tokens
-- Table-based outer email wrapper
-- Inline styles for common Markdown elements
-- Conservative generated HTML sanitization:
-  - strips Sätteri classes and unsupported attributes
-  - removes unsafe link/image URLs
-  - escapes raw HTML
-  - converts GFM task-list checkboxes to `☑` / `☐`
-- Diagnostics printed to stderr by default
-- Strict mode for CI-style validation
-- No runtime dependencies beyond Sätteri
+Important: output is conservative, but not guaranteed to render perfectly in every email client. Test important templates in your target clients or an email testing service.
+
+## Agent quickstart
+
+Use this section when picking up implementation work.
+
+Key files:
+
+- `src/cli.ts` — CLI argument parsing, file I/O, orchestration
+- `src/config.ts` — TOML config, reusable themes, validation, merge order
+- `src/markdown.ts` — Sätteri integration
+- `src/email.ts` — email-safe HAST normalization, inline styles, final HTML wrapper
+- `src/diagnostics.ts` — diagnostics model/formatting
+- `test/*.test.ts` — behavior coverage
+- `mdtoemail.example.toml` — complete supported config example
+- `examples/` — sample Markdown, configs, themes, generated HTML
+
+Validation checklist:
+
+```bash
+bun test
+bun run typecheck
+bun run build
+```
+
+Project rules:
+
+- Keep it CLI-only: no server, sending, tracking, webhooks, or provider integrations.
+- Prefer Bun/Node built-ins; avoid new dependencies unless clearly worth it.
+- Keep output conservative for email: table wrappers, inline styles, simple CSS, no JS/forms/raw HTML passthrough.
+- Customize styling through safe theme tokens, not arbitrary CSS maps.
 
 ## Requirements
 
-- [Bun](https://bun.sh/) 1.3+
+- Bun 1.3+
 
-## Installation from source
+## Setup
 
 ```bash
 bun install
 ```
 
-Run the CLI directly:
+Run from source:
 
 ```bash
 bun run src/cli.ts input.md -o email.html
 ```
 
-Or use the package script during development:
+Development shortcut:
 
 ```bash
 bun run dev -- input.md -o email.html
@@ -57,8 +78,8 @@ bun run src/cli.ts [options] <input.md>
 Options:
 
 ```txt
--o, --output <file>   Output HTML file
--c, --config <file>   TOML config file
+-o, --output <file>      Output HTML file
+-c, --config <file>      TOML config file
     --theme <name|file>  Theme name from ./themes or TOML theme file
     --strict             Fail on warning diagnostics
     --no-warnings        Do not print diagnostics
@@ -82,14 +103,14 @@ bun run src/cli.ts welcome.md --config mdtoemail.toml -o email.html
 bun run src/cli.ts welcome.md --theme newsletter -o email.html
 bun run src/cli.ts welcome.md --theme ./examples/themes/newsletter.toml -o email.html
 
-# Fail if warning diagnostics are produced
+# CI-style validation: fail before writing if warning diagnostics occur
 bun run src/cli.ts welcome.md --strict -o email.html
 
 # Suppress diagnostic output
 bun run src/cli.ts welcome.md --no-warnings -o email.html
 ```
 
-If `-o/--output` is omitted, the output path is derived from the input:
+If `--output` is omitted, the output path is derived from the input:
 
 - `welcome.md` → `welcome.html`
 - `welcome.markdown` → `welcome.html`
@@ -97,52 +118,23 @@ If `-o/--output` is omitted, the output path is derived from the input:
 
 Existing output files are overwritten.
 
-## Examples
-
-The `examples/` directory showcases default rendering, reusable theme files, and config-based theme overrides.
-
-```bash
-# Built-in defaults
-bun run src/cli.ts examples/product-update.md -o examples/product-update.html
-
-# Direct reusable theme file
-bun run src/cli.ts examples/product-update.md \
-  --theme ./examples/themes/newsletter.toml \
-  -o examples/product-update-newsletter.html
-
-# Config extends a named theme from examples/themes/newsletter.toml and overrides tokens
-bun run src/cli.ts examples/product-update.md \
-  --config examples/product-update-custom.toml \
-  -o examples/product-update-custom.html
-
-# Transactional theme plus local overrides
-bun run src/cli.ts examples/security-notice.md \
-  --config examples/security-notice-custom.toml \
-  -o examples/security-notice-custom.html
-
-# Dedicated theme-token showcase
-bun run src/cli.ts examples/theme-customizations.md \
-  --config examples/theme-customizations.toml \
-  -o examples/theme-customizations-custom.html
-```
-
-Reusable example themes live in `examples/themes/`:
-
-- `minimal.toml`
-- `newsletter.toml`
-- `transactional.toml`
-
 ## Configuration
 
-`mdtoemail` uses TOML. If `--config` is not provided, it automatically loads `mdtoemail.toml` from the current working directory when present. Otherwise, defaults are used.
+`mdtoemail` uses TOML. If `--config` is omitted, it auto-loads `mdtoemail.toml` from the current working directory when present; otherwise defaults are used.
 
-See [`mdtoemail.example.toml`](./mdtoemail.example.toml):
+Start from the complete example:
+
+```bash
+cp mdtoemail.example.toml mdtoemail.toml
+```
+
+Core config shape:
 
 ```toml
 [markdown]
 gfm = true
 frontmatter = true
-# Reserved for future unsafe/raw HTML handling. Email-safe output currently escapes raw HTML either way.
+# Accepted for future compatibility; raw HTML is currently escaped regardless.
 raw_html = false
 
 [email]
@@ -152,7 +144,7 @@ warnings = true
 strict = false
 
 [theme]
-# Optional reusable theme selected from ./themes/<name>.toml, unless --theme overrides it.
+# Optional reusable theme selected from ./themes/<name>.toml.
 # extends = "newsletter"
 background_color = "#f4f4f4"
 container_background = "#ffffff"
@@ -166,41 +158,60 @@ line_height = "1.5"
 content_padding = "32px"
 ```
 
+See [`mdtoemail.example.toml`](./mdtoemail.example.toml) for every supported token.
+
+### Merge order
+
+Config is resolved in this order:
+
+1. built-in defaults
+2. reusable theme file selected by `[theme].extends` or `--theme`
+3. project config file
+4. CLI overrides (`--theme` overrides `[theme].extends`)
+
 ### Markdown options
 
 - `gfm`: enables GitHub Flavored Markdown features through Sätteri, including tables, strikethrough, task lists, autolinks, and footnotes.
-- `frontmatter`: extracts YAML/TOML frontmatter instead of rendering it as Markdown.
-- `raw_html`: accepted for future compatibility, but currently raw HTML is escaped in final email-safe output regardless of this setting.
+- `frontmatter`: extracts frontmatter instead of rendering it as Markdown.
+- `raw_html`: currently raw HTML is still escaped in final email-safe output.
 
 ### Email options
 
-- `container_width`: width of the inner email container/table in pixels.
-- `outer_padding`: spacing around the centered email container.
-- `warnings`: prints diagnostics to stderr when `true`.
-- `strict`: exits non-zero before writing output when warning-severity diagnostics are produced.
+- `container_width`: inner email container width in pixels.
+- `outer_padding`: spacing around the centered container.
+- `warnings`: print diagnostics to stderr.
+- `strict`: exit non-zero before writing output if warning diagnostics occur.
 
 ### Theme options
 
-Theme values are inserted into conservative inline styles. Keep values simple and email-client-friendly.
+Theme values are safe design tokens inserted into renderer-controlled inline styles. Supported tokens cover colors, fonts, spacing, headings, paragraphs, lists, tables, code/pre, blockquotes, images, and footnotes.
 
-Supported tokens include colors, fonts, base sizing, content padding, heading sizes/margins/line-heights, paragraph/list/table spacing, code/pre styling, blockquote styling, image margin, and footnote spacing. See [`mdtoemail.example.toml`](./mdtoemail.example.toml) for the complete list.
+To prevent CSS declaration injection and avoid fragile old-client CSS, style values reject empty/control values, `;`, `{}`, angle brackets, CSS comments, `url(...)`, `expression(...)`, `var(...)`, `calc(...)`, `clamp(...)`, modern color functions, and viewport/container units.
 
-Style token values are validated: empty values, control characters, `;`, `{}`, angle brackets, CSS comments, `url(...)`, and `expression(...)` are rejected to prevent arbitrary CSS declaration injection.
+## Reusable themes
 
-#### Reusable theme files
-
-Select a reusable theme from config:
+Select a named theme in config:
 
 ```toml
 [theme]
 extends = "newsletter"
 ```
 
-A named theme resolves to `themes/<name>.toml` relative to the explicit config file directory, or the current working directory when no config file is provided. `--theme <name>` overrides `[theme].extends` and follows the same named-theme lookup.
+Or via CLI:
 
-Explicit `--theme ./path/to/theme.toml` paths resolve from the current working directory.
+```bash
+bun run src/cli.ts input.md --theme newsletter -o email.html
+bun run src/cli.ts input.md --theme ./examples/themes/newsletter.toml -o email.html
+```
 
-Theme files are TOML files that may contain:
+Resolution rules:
+
+- named themes resolve to `themes/<name>.toml`
+- with `--config`, named themes resolve relative to the config file directory
+- without `--config`, named themes resolve relative to the current working directory
+- explicit `--theme ./path/to/theme.toml` paths resolve from the current working directory
+
+Theme files may contain only:
 
 - `[theme]` tokens
 - `[email].container_width`
@@ -226,26 +237,15 @@ content_padding = "36px"
 
 ## Diagnostics and strict mode
 
-Diagnostics are printed to stderr by default. They describe content that was changed, removed, or escaped during conversion.
+Diagnostics describe content that was changed, removed, escaped, or may be email-client-sensitive.
 
-Example:
+Example output:
 
 ```txt
 Warning [unsafe-link-url]: Removed unsafe link URL "javascript:alert(1)".
 Warning [raw-html-escaped]: Escaped raw HTML because arbitrary HTML is not supported in email-safe output.
 Info [task-list-input-transformed]: Converted task-list checkbox inputs to plain text symbols for email compatibility.
 ```
-
-Current warning diagnostics can include:
-
-- unsafe link URL removed
-- unsafe image URL removed
-- raw HTML escaped
-- unsupported generated element removed
-
-Current info diagnostics can include:
-
-- task-list checkbox inputs converted to text symbols
 
 Strict mode fails only on warning diagnostics, not info diagnostics:
 
@@ -257,30 +257,72 @@ If strict mode fails, no output file is written.
 
 ## Email compatibility approach
 
-The generated HTML favors broad compatibility over modern web features:
+Generated HTML favors broad email compatibility over modern web features:
 
 - table-based outer layout
+- legacy table attributes: `width`, `cellpadding`, `cellspacing`, `border`, `align`, `valign`, `bgcolor`
 - inline styles
-- simple system fonts
-- simple spacing, colors, and borders
-- no JavaScript
-- no forms or interactive inputs
-- raw HTML escaped
-- task list inputs converted to plain text
+- Outlook-oriented table spacing resets where useful
+- fluid-hybrid inner container: fixed `width` attribute plus `width:100%;max-width:...`
+- simple system fonts, spacing, colors, and borders
+- HTTPS-only generated image tags
+- no JavaScript, forms, interactive inputs, external CSS, or raw HTML passthrough
+- GFM task-list inputs converted to text symbols
 
-This improves compatibility, but does not guarantee perfect rendering in every email client. Test important templates in your target clients and sending provider.
+Recommended external references:
+
+- [Can I Email](https://www.caniemail.com/)
+- [Campaign Monitor CSS support](https://www.campaignmonitor.com/css/)
+- [Mailchimp HTML email basics](https://templates.mailchimp.com/getting-started/html-email-basics/)
 
 ## Security / sanitization notes
 
-`mdtoemail` is designed to make Sätteri-generated Markdown output safer for email. It is **not** a general-purpose arbitrary HTML sanitizer.
+`mdtoemail` makes Sätteri-generated Markdown output safer for email. It is **not** a general-purpose arbitrary HTML sanitizer.
 
-Important behavior:
+Current behavior:
 
 - raw HTML is escaped
 - unsafe URL protocols such as `javascript:`, `data:`, and `file:` are rejected
 - protocol-relative URLs like `//example.com` are rejected
-- image URLs are limited to `http:` and `https:` plus relative paths supported by the current URL policy
-- link URLs allow `http:`, `https:`, `mailto:`, `tel:`, and relative/hash URLs
+- image tags require absolute `https:` URLs
+- unsupported images are removed with alt-text fallback where possible
+- link URLs allow `http:`, `https:`, `mailto:`, `tel:`, relative URLs, and hash URLs
+- `http:` and relative links are kept but reported as diagnostics
+
+## Examples
+
+The `examples/` directory includes sample Markdown, config overrides, theme files, and generated HTML.
+
+```bash
+# Default rendering
+bun run src/cli.ts examples/product-update.md -o examples/product-update.html
+
+# Reusable theme file
+bun run src/cli.ts examples/product-update.md \
+  --theme ./examples/themes/newsletter.toml \
+  -o examples/product-update-newsletter.html
+
+# Config extends a named theme and overrides tokens
+bun run src/cli.ts examples/product-update.md \
+  --config examples/product-update-custom.toml \
+  -o examples/product-update-custom.html
+
+# Transactional example
+bun run src/cli.ts examples/security-notice.md \
+  --config examples/security-notice-custom.toml \
+  -o examples/security-notice-custom.html
+
+# Theme-token showcase
+bun run src/cli.ts examples/theme-customizations.md \
+  --config examples/theme-customizations.toml \
+  -o examples/theme-customizations-custom.html
+```
+
+Reusable example themes:
+
+- `examples/themes/minimal.toml`
+- `examples/themes/newsletter.toml`
+- `examples/themes/transactional.toml`
 
 ## Development
 
@@ -293,14 +335,14 @@ bun run build
 
 Scripts:
 
-- `bun run dev -- <args>`: run the CLI from source
-- `bun test`: run tests
-- `bun run typecheck`: run TypeScript checks
-- `bun run build`: bundle the Bun target into `dist/`
+- `bun run dev -- <args>` — run the CLI from source
+- `bun test` — run tests
+- `bun run typecheck` — run TypeScript checks
+- `bun run build` — bundle the Bun target into `dist/`
 
-This project is intended to run as a Bun/npm CLI.
+This project is intended to run as a Bun/npm CLI. Standalone compiled binaries are not the current target because Sätteri uses native bindings.
 
-## Project scope
+## Scope
 
 In scope:
 
@@ -315,8 +357,7 @@ Out of scope:
 - sending email
 - SMTP/provider integrations
 - bounce/complaint handling
-- tracking pixels
-- click tracking
+- tracking pixels / click tracking
 - webhooks
 - marketing automation
 - server mode
