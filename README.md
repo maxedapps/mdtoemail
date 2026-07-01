@@ -4,9 +4,7 @@ Fast Bun + TypeScript CLI for converting Markdown into conservative, email-frien
 
 `mdtoemail` is intentionally narrow: **Markdown file in, standalone HTML file out**. It does not send email, track opens/clicks, run a server, manage webhooks, or handle provider-specific delivery concerns.
 
-## Status
-
-Early development, usable for experimentation. The converter currently:
+## What it does
 
 - renders Markdown with pinned `satteri@0.9.4`
 - wraps output in a table-based email document
@@ -15,37 +13,48 @@ Early development, usable for experimentation. The converter currently:
 - supports safe TOML theme tokens and reusable theme files
 - reports diagnostics and supports strict mode
 
-Important: output is conservative, but not guaranteed to render perfectly in every email client. Test important templates in your target clients or an email testing service.
-
 ## Agent quickstart
 
-Use this section when picking up implementation work.
+Use this section when an AI agent needs to convert Markdown into email HTML with this tool.
 
-Key files:
+1. Install dependencies if needed:
 
-- `src/cli.ts` — CLI argument parsing, file I/O, orchestration
-- `src/config.ts` — TOML config, reusable themes, validation, merge order
-- `src/markdown.ts` — Sätteri integration
-- `src/email.ts` — email-safe HAST normalization, inline styles, final HTML wrapper
-- `src/diagnostics.ts` — diagnostics model/formatting
-- `test/*.test.ts` — behavior coverage
-- `mdtoemail.example.toml` — complete supported config example
-- `examples/` — sample Markdown, configs, themes, generated HTML
+   ```bash
+   bun install
+   ```
 
-Validation checklist:
+2. Convert a Markdown file:
 
-```bash
-bun test
-bun run typecheck
-bun run build
-```
+   ```bash
+   bun run src/cli.ts input.md -o email.html
+   ```
 
-Project rules:
+3. Use a config file when custom tokens or strict/warning settings are needed:
 
-- Keep it CLI-only: no server, sending, tracking, webhooks, or provider integrations.
-- Prefer Bun/Node built-ins; avoid new dependencies unless clearly worth it.
-- Keep output conservative for email: table wrappers, inline styles, simple CSS, no JS/forms/raw HTML passthrough.
-- Customize styling through safe theme tokens, not arbitrary CSS maps.
+   ```bash
+   cp mdtoemail.example.toml mdtoemail.toml
+   bun run src/cli.ts input.md --config mdtoemail.toml -o email.html
+   ```
+
+4. Use a reusable theme when only appearance/layout should change:
+
+   ```bash
+   bun run src/cli.ts input.md --theme ./examples/themes/newsletter.toml -o email.html
+   ```
+
+5. For safer CI-style conversion, fail before writing output if warning diagnostics occur:
+
+   ```bash
+   bun run src/cli.ts input.md --strict -o email.html
+   ```
+
+Agent usage notes:
+
+- Input must be Markdown; output is a standalone HTML file.
+- Read stderr diagnostics after conversion; they explain removed, escaped, or compatibility-sensitive content.
+- Prefer `--strict` when producing HTML for automated pipelines.
+- Do not add sending, tracking, provider webhooks, or server behavior around this tool.
+- Customize styling through TOML theme tokens, not arbitrary CSS.
 
 ## Requirements
 
