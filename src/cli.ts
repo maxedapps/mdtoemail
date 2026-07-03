@@ -15,6 +15,7 @@ Options:
   -c, --config <file>   TOML config file
       --theme <name|file>  Theme name from ./themes or TOML theme file
       --strict             Fail on warning diagnostics
+      --pretty             Indent the generated HTML content
       --no-warnings        Do not print diagnostics
   -h, --help            Show help
   -v, --version         Show version`;
@@ -26,6 +27,7 @@ const cliOptions = {
   config: { type: "string", short: "c" },
   theme: { type: "string" },
   strict: { type: "boolean" },
+  pretty: { type: "boolean" },
   "no-warnings": { type: "boolean" },
 } as const;
 
@@ -131,6 +133,7 @@ function applyCliOverrides(config: Config, values: ReturnType<typeof parseCliArg
       ...config.email,
       strict: values.strict ? true : config.email.strict,
       warnings: values["no-warnings"] ? false : config.email.warnings,
+      pretty: values.pretty ? true : config.email.pretty,
     },
   };
 }

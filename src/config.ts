@@ -4,62 +4,15 @@ export interface Config {
   markdown: {
     gfm: boolean;
     frontmatter: boolean;
-    rawHtml: boolean;
   };
   email: {
     containerWidth: number;
     outerPadding: string;
     warnings: boolean;
     strict: boolean;
+    pretty: boolean;
   };
-  theme: {
-    backgroundColor: string;
-    containerBackground: string;
-    textColor: string;
-    headingColor: string;
-    mutedTextColor: string;
-    linkColor: string;
-    borderColor: string;
-    tableHeaderBackground: string;
-    codeBackground: string;
-    blockquoteBorderColor: string;
-    fontFamily: string;
-    codeFontFamily: string;
-    baseFontSize: string;
-    smallFontSize: string;
-    lineHeight: string;
-    contentPadding: string;
-    h1FontSize: string;
-    h2FontSize: string;
-    h3FontSize: string;
-    minorHeadingFontSize: string;
-    h1LineHeight: string;
-    h2LineHeight: string;
-    h3LineHeight: string;
-    minorHeadingLineHeight: string;
-    h1Margin: string;
-    h2Margin: string;
-    h3Margin: string;
-    minorHeadingMargin: string;
-    paragraphMargin: string;
-    listMargin: string;
-    listPadding: string;
-    listItemMargin: string;
-    blockquoteMargin: string;
-    blockquotePadding: string;
-    codeFontSize: string;
-    codePadding: string;
-    preMargin: string;
-    prePadding: string;
-    preFontSize: string;
-    preLineHeight: string;
-    hrMargin: string;
-    imageMargin: string;
-    tableMargin: string;
-    tableCellPadding: string;
-    footnoteMargin: string;
-    footnotePadding: string;
-  };
+  theme: Record<ThemeConfigKey, string>;
 }
 
 export interface LoadConfigOptions {
@@ -123,13 +76,13 @@ export const defaultConfig: Config = {
   markdown: {
     gfm: true,
     frontmatter: true,
-    rawHtml: false,
   },
   email: {
     containerWidth: 600,
     outerPadding: "24px 12px",
     warnings: true,
     strict: false,
+    pretty: false,
   },
   theme: {
     backgroundColor: "#f4f4f4",
@@ -213,9 +166,6 @@ export function mergeConfig(raw: unknown, base: Config = defaultConfig): Config 
     setBoolean(raw.markdown, "frontmatter", "markdown.frontmatter", (value) => {
       config.markdown.frontmatter = value;
     });
-    setBoolean(raw.markdown, "raw_html", "markdown.raw_html", (value) => {
-      config.markdown.rawHtml = value;
-    });
   }
 
   if (raw.email !== undefined) {
@@ -223,17 +173,15 @@ export function mergeConfig(raw: unknown, base: Config = defaultConfig): Config 
       throw new Error("Invalid config: email must be a table.");
     }
 
-    setNumber(raw.email, "container_width", "email.container_width", (value) => {
-      config.email.containerWidth = value;
-    });
-    setStyleString(raw.email, "outer_padding", "email.outer_padding", (value) => {
-      config.email.outerPadding = value;
-    });
+    applyEmailLayoutFields(raw.email, config, "Invalid config");
     setBoolean(raw.email, "warnings", "email.warnings", (value) => {
       config.email.warnings = value;
     });
     setBoolean(raw.email, "strict", "email.strict", (value) => {
       config.email.strict = value;
+    });
+    setBoolean(raw.email, "pretty", "email.pretty", (value) => {
+      config.email.pretty = value;
     });
   }
 
@@ -268,12 +216,7 @@ function mergeThemeConfig(raw: unknown, base: Config): Config {
     }
 
     rejectUnknownKeys(raw.email, new Set(["container_width", "outer_padding"]), "Invalid theme: email");
-    setNumber(raw.email, "container_width", "email.container_width", (value) => {
-      config.email.containerWidth = value;
-    }, "Invalid theme");
-    setStyleString(raw.email, "outer_padding", "email.outer_padding", (value) => {
-      config.email.outerPadding = value;
-    }, "Invalid theme");
+    applyEmailLayoutFields(raw.email, config, "Invalid theme");
   }
 
   if (raw.theme !== undefined) {
@@ -367,6 +310,19 @@ function cloneConfig(config: Config): Config {
     email: { ...config.email },
     theme: { ...config.theme },
   };
+}
+
+function applyEmailLayoutFields(
+  rawEmail: Record<string, unknown>,
+  config: Config,
+  prefix: "Invalid config" | "Invalid theme",
+): void {
+  setNumber(rawEmail, "container_width", "email.container_width", (value) => {
+    config.email.containerWidth = value;
+  }, prefix);
+  setStyleString(rawEmail, "outer_padding", "email.outer_padding", (value) => {
+    config.email.outerPadding = value;
+  }, prefix);
 }
 
 function applyThemeFields(rawTheme: Record<string, unknown>, config: Config, prefix: "Invalid config" | "Invalid theme"): void {

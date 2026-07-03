@@ -10,12 +10,16 @@ export type DiagnosticCode =
   | "missing-image-alt"
   | "unsupported-element"
   | "raw-html-escaped"
-  | "task-list-input-transformed";
+  | "task-list-input-transformed"
+  | "wide-table"
+  | "footnote-support"
+  | "long-code-line";
 
 export interface Diagnostic {
   code: DiagnosticCode;
   severity: DiagnosticSeverity;
   message: string;
+  line?: number;
 }
 
 export function addDiagnostic(diagnostics: Diagnostic[], diagnostic: Diagnostic): void {
@@ -33,5 +37,6 @@ export function countWarnings(diagnostics: readonly Diagnostic[]): number {
 
 export function formatDiagnostic(diagnostic: Diagnostic): string {
   const label = diagnostic.severity === "warning" ? "Warning" : "Info";
-  return `${label} [${diagnostic.code}]: ${diagnostic.message}`;
+  const location = diagnostic.line !== undefined ? ` (line ${diagnostic.line})` : "";
+  return `${label} [${diagnostic.code}]: ${diagnostic.message}${location}`;
 }

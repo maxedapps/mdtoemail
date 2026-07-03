@@ -36,15 +36,20 @@ const allowedElements = new Set([
   "div",
 ]);
 
+const maxComfortableTableColumns = 6;
+const maxComfortableCodeLine = 80;
+
 export function emailHastPlugin(config: Config, diagnostics: Diagnostic[] = []): HastPluginInput {
   return defineHastPlugin({
     name: "email-sanitizer",
     element: {
       filter: [],
       visit(node, ctx) {
+        const line = lineOf(node);
+
         if (node.tagName === "input") {
           if (isCheckbox(node.properties)) {
-            addDiagnosticOnce(diagnostics, {
+            reportOnce(diagnostics, line, {
               code: "task-list-input-transformed",
               severity: "info",
               message: "Converted task-list checkbox inputs to plain text symbols for email compatibility.",
@@ -52,7 +57,7 @@ export function emailHastPlugin(config: Config, diagnostics: Diagnostic[] = []):
             return { type: "text", value: isCheckedCheckbox(node.properties) ? "☑ " : "☐ " };
           }
 
-          addDiagnostic(diagnostics, {
+          report(diagnostics, line, {
             code: "unsupported-element",
             severity: "warning",
             message: "Removed unsupported <input> element.",
@@ -62,12 +67,12 @@ export function emailHastPlugin(config: Config, diagnostics: Diagnostic[] = []):
         }
 
         if (node.tagName === "section") {
-          replaceSectionWithDiv(node, ctx, config);
+          replaceSectionWithDiv(node, ctx, config, diagnostics, line);
           return;
         }
 
         if (!allowedElements.has(node.tagName)) {
-          addDiagnostic(diagnostics, {
+          report(diagnostics, line, {
             code: "unsupported-element",
             severity: "warning",
             message: `Removed unsupported <${node.tagName}> element.`,
@@ -78,11 +83,11 @@ export function emailHastPlugin(config: Config, diagnostics: Diagnostic[] = []):
 
         const originalProperties = { ...node.properties };
         stripProperties(node, ctx);
-        applySafeProperties(node, originalProperties, ctx, config, diagnostics);
+        applySafeProperties(node, originalProperties, ctx, config, diagnostics, line);
       },
     },
     raw(node) {
-      addDiagnosticOnce(diagnostics, {
+      reportOnce(diagnostics, lineOf(node), {
         code: "raw-html-escaped",
         severity: "warning",
         message: "Escaped raw HTML because arbitrary HTML is not supported in email-safe output.",
@@ -92,9 +97,12 @@ export function emailHastPlugin(config: Config, diagnostics: Diagnostic[] = []):
   });
 }
 
+const contentIndent = 16;
+
 export function renderEmailDocument(contentHtml: string, inputPath: string, config: Config): string {
   const width = config.email.containerWidth;
   const title = Bun.escapeHTML(basename(inputPath));
+  const content = config.email.pretty ? indentContent(contentHtml, contentIndent) : contentHtml;
   const backgroundColor = legacyColorAttribute(config.theme.backgroundColor);
   const containerBackground = legacyColorAttribute(config.theme.containerBackground);
   const bodyStyle = escapedStyleAttribute({
@@ -142,7 +150,7 @@ export function renderEmailDocument(contentHtml: string, inputPath: string, conf
           <table role="presentation" align="center" width="${escapeAttributeValue(width)}" cellspacing="0" cellpadding="0" border="0"${containerBackground ? ` bgcolor="${containerBackground}"` : ""} style="${innerTableStyle}">
             <tr>
               <td align="left" valign="top"${containerBackground ? ` bgcolor="${containerBackground}"` : ""} style="${contentCellStyle}">
-                ${contentHtml}
+                ${content}
               </td>
             </tr>
           </table>
@@ -185,6 +193,7 @@ function applySafeProperties(
   ctx: ElementMutationContext,
   config: Config,
   diagnostics: Diagnostic[],
+  line: number | undefined,
 ): void {
   const id = originalProperties.id;
   if (typeof id === "string" && isSafeId(id)) {
@@ -192,20 +201,24 @@ function applySafeProperties(
   }
 
   const textAlign = textAlignFromStyle(originalProperties.style);
+  let linkKept = true;
 
   if (node.tagName === "a") {
     const decision = decideLinkUrl(originalProperties.href);
     if (decision) {
-      addDecisionDiagnostic(diagnostics, decision);
+      addDecisionDiagnostic(diagnostics, decision, line);
       if (decision.action === "keep") {
         ctx.setProperty(node, "href", decision.value);
+      } else {
+        // Href was rejected: render the link text as plain inline text rather than a dead styled link.
+        linkKept = false;
       }
     }
   }
 
   if (node.tagName === "img") {
     const decision = decideImageUrl(originalProperties.src, originalProperties.alt);
-    addDecisionDiagnostic(diagnostics, decision);
+    addDecisionDiagnostic(diagnostics, decision, line);
     if (decision.action === "remove") {
       if (decision.fallbackText) {
         ctx.replaceNode(node, { type: "text", value: decision.fallbackText });
@@ -218,7 +231,7 @@ function applySafeProperties(
     ctx.setProperty(node, "src", decision.value);
     const alt = typeof originalProperties.alt === "string" ? originalProperties.alt.trim() : "";
     if (!alt) {
-      addDiagnosticOnce(diagnostics, {
+      reportOnce(diagnostics, line, {
         code: "missing-image-alt",
         severity: "info",
         message: "Image is missing alt text; emitted an empty alt attribute.",
@@ -235,6 +248,26 @@ function applySafeProperties(
     ctx.setProperty(node, "cellSpacing", "0");
     ctx.setProperty(node, "cellPadding", "0");
     ctx.setProperty(node, "border", "0");
+
+    const columns = countTableColumns(node);
+    if (columns > maxComfortableTableColumns) {
+      report(diagnostics, line, {
+        code: "wide-table",
+        severity: "info",
+        message: `Table has ${columns} columns; it may be hard to read on narrow mobile screens.`,
+      });
+    }
+  }
+
+  if (node.tagName === "pre") {
+    const longest = longestCodeLine(node);
+    if (longest > maxComfortableCodeLine) {
+      report(diagnostics, line, {
+        code: "long-code-line",
+        severity: "info",
+        message: `Code block has long lines (up to ${longest} characters); they may wrap awkwardly in some clients.`,
+      });
+    }
   }
 
   if (node.tagName === "th" || node.tagName === "td") {
@@ -245,6 +278,10 @@ function applySafeProperties(
       const bgColor = legacyColorAttribute(config.theme.tableHeaderBackground);
       if (bgColor) ctx.setProperty(node, "bgColor", bgColor);
     }
+  }
+
+  if (node.tagName === "a" && !linkKept) {
+    return;
   }
 
   const style = styleForElement(
@@ -258,16 +295,27 @@ function applySafeProperties(
   }
 }
 
-function replaceSectionWithDiv(node: Readonly<Element>, ctx: ElementMutationContext, config: Config): void {
+function replaceSectionWithDiv(
+  node: Readonly<Element>,
+  ctx: ElementMutationContext,
+  config: Config,
+  diagnostics: Diagnostic[],
+  line: number | undefined,
+): void {
   const properties: Element["properties"] = {};
   const id = node.properties.id;
   if (typeof id === "string" && isSafeId(id)) {
     properties.id = id;
   }
 
-  const style = styleForElement("div", config);
-  if (style) {
-    properties.style = style;
+  // Footnote sections are the only sections styled as a block; other sections become a neutral div.
+  if (isFootnoteSection(node.properties)) {
+    reportOnce(diagnostics, line, {
+      code: "footnote-support",
+      severity: "info",
+      message: "Footnotes may render inconsistently across some email clients.",
+    });
+    properties.style = footnoteStyle(config);
   }
 
   ctx.replaceNode(node, {
@@ -278,21 +326,25 @@ function replaceSectionWithDiv(node: Readonly<Element>, ctx: ElementMutationCont
   });
 }
 
-function addDecisionDiagnostic(diagnostics: Diagnostic[], decision: UrlDecision): void {
+function addDecisionDiagnostic(diagnostics: Diagnostic[], decision: UrlDecision, line: number | undefined): void {
   if (!decision.diagnostic) return;
+  report(diagnostics, line, decision.diagnostic);
+}
 
-  if (
-    decision.diagnostic.code === "insecure-link-url" ||
-    decision.diagnostic.code === "relative-link-url" ||
-    decision.diagnostic.code === "insecure-image-url" ||
-    decision.diagnostic.code === "relative-image-url" ||
-    decision.diagnostic.code === "missing-image-alt"
-  ) {
-    addDiagnosticOnce(diagnostics, decision.diagnostic);
-    return;
-  }
+function report(diagnostics: Diagnostic[], line: number | undefined, diagnostic: Diagnostic): void {
+  addDiagnostic(diagnostics, line === undefined ? diagnostic : { ...diagnostic, line });
+}
 
-  addDiagnostic(diagnostics, decision.diagnostic);
+function reportOnce(diagnostics: Diagnostic[], line: number | undefined, diagnostic: Diagnostic): void {
+  addDiagnosticOnce(diagnostics, line === undefined ? diagnostic : { ...diagnostic, line });
+}
+
+function lineOf(node: { position?: { start: { line: number } } | undefined }): number | undefined {
+  return node.position?.start.line;
+}
+
+function indentContent(html: string, spaces: number): string {
+  return html.split("\n").join("\n" + " ".repeat(spaces));
 }
 
 function decideLinkUrl(value: unknown): UrlDecision | undefined {
@@ -428,6 +480,47 @@ function setDimensionProperty(
   }
 }
 
+function isFootnoteSection(properties: Record<string, unknown>): boolean {
+  if ("dataFootnotes" in properties) return true;
+  const className = properties.className;
+  return Array.isArray(className) ? className.includes("footnotes") : className === "footnotes";
+}
+
+function countTableColumns(table: Readonly<Element>): number {
+  const row = findFirstRow(table);
+  if (!row) return 0;
+  return row.children.filter(
+    (child) => child.type === "element" && (child.tagName === "th" || child.tagName === "td"),
+  ).length;
+}
+
+function findFirstRow(node: Readonly<Element>): Element | undefined {
+  for (const child of node.children) {
+    if (child.type !== "element") continue;
+    if (child.tagName === "tr") return child;
+    const nested = findFirstRow(child);
+    if (nested) return nested;
+  }
+  return undefined;
+}
+
+function longestCodeLine(pre: Readonly<Element>): number {
+  let max = 0;
+  for (const codeLine of collectText(pre).split("\n")) {
+    if (codeLine.length > max) max = codeLine.length;
+  }
+  return max;
+}
+
+function collectText(node: Readonly<Element>): string {
+  let text = "";
+  for (const child of node.children) {
+    if (child.type === "text") text += child.value;
+    else if (child.type === "element") text += collectText(child);
+  }
+  return text;
+}
+
 function isCheckbox(properties: Record<string, unknown>): boolean {
   return properties.type === "checkbox";
 }
@@ -493,11 +586,20 @@ function styleForElement(tagName: string, config: Config, textAlign?: string, sc
       return rawStyleAttribute({ border: `1px solid ${theme.borderColor}`, padding: theme.tableCellPadding, background: theme.tableHeaderBackground, color: theme.textColor, "font-weight": "700", "text-align": textAlign });
     case "td":
       return rawStyleAttribute({ border: `1px solid ${theme.borderColor}`, padding: theme.tableCellPadding, color: theme.textColor, "text-align": textAlign });
-    case "div":
-      return rawStyleAttribute({ margin: theme.footnoteMargin, padding: theme.footnotePadding, "border-top": `1px solid ${theme.borderColor}`, color: theme.mutedTextColor, "font-size": theme.smallFontSize });
     default:
       return undefined;
   }
+}
+
+function footnoteStyle(config: Config): string {
+  const { theme } = config;
+  return rawStyleAttribute({
+    margin: theme.footnoteMargin,
+    padding: theme.footnotePadding,
+    "border-top": `1px solid ${theme.borderColor}`,
+    color: theme.mutedTextColor,
+    "font-size": theme.smallFontSize,
+  });
 }
 
 function legacyColorAttribute(value: string): string | undefined {

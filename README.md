@@ -91,6 +91,7 @@ Options:
 -c, --config <file>      TOML config file
     --theme <name|file>  Theme name from ./themes or TOML theme file
     --strict             Fail on warning diagnostics
+    --pretty             Indent the generated HTML content
     --no-warnings        Do not print diagnostics
 -h, --help               Show help
 -v, --version            Show version
@@ -143,14 +144,13 @@ Core config shape:
 [markdown]
 gfm = true
 frontmatter = true
-# Accepted for future compatibility; raw HTML is currently escaped regardless.
-raw_html = false
 
 [email]
 container_width = 600
 outer_padding = "24px 12px"
 warnings = true
 strict = false
+pretty = false
 
 [theme]
 # Optional reusable theme selected from ./themes/<name>.toml.
@@ -182,7 +182,8 @@ Config is resolved in this order:
 
 - `gfm`: enables GitHub Flavored Markdown features through Sätteri, including tables, strikethrough, task lists, autolinks, and footnotes.
 - `frontmatter`: extracts frontmatter instead of rendering it as Markdown.
-- `raw_html`: currently raw HTML is still escaped in final email-safe output.
+
+Raw HTML in the Markdown source is always escaped in email-safe output; there is no passthrough option.
 
 ### Email options
 
@@ -190,6 +191,7 @@ Config is resolved in this order:
 - `outer_padding`: spacing around the centered container.
 - `warnings`: print diagnostics to stderr.
 - `strict`: exit non-zero before writing output if warning diagnostics occur.
+- `pretty`: indent the generated HTML content for readability (cosmetic; line-based indentation, not a full formatter).
 
 ### Theme options
 

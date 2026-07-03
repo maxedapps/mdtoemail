@@ -42,6 +42,17 @@ describe("CLI", () => {
     await expectFileExists(output);
   });
 
+  test("includes the source line in printed diagnostics", async () => {
+    const { input, output } = await writeInput("intro\n\n[bad](javascript:alert(1))");
+
+    const result = runCli(input, "-o", output);
+
+    expect(result.exitCode).toBe(0);
+    expect(stderr(result)).toContain("Warning [unsafe-link-url]");
+    expect(stderr(result)).toContain("(line 3)");
+    await expectFileExists(output);
+  });
+
   test("suppresses diagnostics when configured", async () => {
     const { dir, input, output } = await writeInput("[bad](javascript:alert(1))");
     const config = join(dir, "mdtoemail.toml");
@@ -131,6 +142,16 @@ describe("CLI", () => {
     expect(stderr(result)).not.toContain("Warning [insecure-link-url]");
     expect(stderr(result)).toContain("Strict mode failed with 1 warning(s).");
     await expectFileMissing(output);
+  });
+
+  test("--pretty indents the generated content", async () => {
+    const { input, output } = await writeInput("# Hello\n\nWorld");
+
+    const result = runCli(input, "--pretty", "-o", output);
+
+    expect(result.exitCode).toBe(0);
+    const html = await readFile(output, "utf8");
+    expect(html).toContain("\n                <p");
   });
 
   test("--theme path applies a TOML theme", async () => {

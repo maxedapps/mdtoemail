@@ -75,4 +75,15 @@ describe("diagnostics", () => {
       }),
     ).toBe("Info [task-list-input-transformed]: Converted task list.");
   });
+
+  test("appends the source line when present", () => {
+    expect(
+      formatDiagnostic({
+        code: "unsafe-link-url",
+        severity: "warning",
+        message: "Removed unsafe link URL.",
+        line: 12,
+      }),
+    ).toBe("Warning [unsafe-link-url]: Removed unsafe link URL. (line 12)");
+  });
 });

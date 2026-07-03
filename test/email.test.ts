@@ -55,6 +55,17 @@ describe("renderEmailDocument", () => {
     expect(html).not.toContain("<main");
   });
 
+  test("indents content when pretty is enabled", () => {
+    const compact = renderEmailDocument("<p>one</p>\n<p>two</p>", "welcome.md", defaultConfig);
+    const pretty = renderEmailDocument("<p>one</p>\n<p>two</p>", "welcome.md", {
+      ...defaultConfig,
+      email: { ...defaultConfig.email, pretty: true },
+    });
+
+    expect(compact).toContain("<p>one</p>\n<p>two</p>");
+    expect(pretty).toContain("<p>one</p>\n                <p>two</p>");
+  });
+
   test("uses configured outer padding", () => {
     const html = renderEmailDocument("<p>Hello</p>", "welcome.md", {
       ...defaultConfig,

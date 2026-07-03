@@ -1,14 +1,14 @@
 [markdown]
 gfm = true
 frontmatter = true
-# Reserved for future unsafe/raw HTML handling. Email-safe output currently escapes raw HTML regardless of this value.
-raw_html = false
 
 [email]
 container_width = 600
 outer_padding = "24px 12px"
 warnings = true
 strict = false
+# Indent the generated HTML content for readability. Cosmetic only.
+pretty = false
 
 [theme]
 # Optional reusable theme selected from ./themes/<name>.toml, unless --theme overrides it.

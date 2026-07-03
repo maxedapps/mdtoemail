@@ -104,21 +104,22 @@ describe("renderMarkdown", () => {
     expect(rendered.html).toContain(">title: Test</h2>");
   });
 
-  test("escapes raw HTML regardless of rawHtml config", async () => {
-    const disabled = await renderMarkdown("a <em>x</em> b", withMarkdownConfig({ rawHtml: false }));
-    const enabled = await renderMarkdown("<script>alert(1)</script>", withMarkdownConfig({ rawHtml: true }));
+  test("always escapes raw HTML in email-safe output", async () => {
+    const inline = await renderMarkdown("a <em>x</em> b", defaultConfig);
+    const script = await renderMarkdown("<script>alert(1)</script>", defaultConfig);
 
-    expect(disabled.diagnostics).toEqual([
+    expect(inline.diagnostics).toEqual([
       {
         code: "raw-html-escaped",
         severity: "warning",
         message: "Escaped raw HTML because arbitrary HTML is not supported in email-safe output.",
+        line: 1,
       },
     ]);
-    expect(enabled.diagnostics).toEqual(disabled.diagnostics);
-    expect(disabled.html).toContain("a &lt;em&gt;x&lt;/em&gt; b");
-    expect(enabled.html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
-    expect(enabled.html).not.toContain("<script>");
+    expect(script.diagnostics).toEqual(inline.diagnostics);
+    expect(inline.html).toContain("a &lt;em&gt;x&lt;/em&gt; b");
+    expect(script.html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
+    expect(script.html).not.toContain("<script>");
   });
 
   test("removes unsafe link URLs while preserving link text", async () => {
@@ -129,10 +130,12 @@ describe("renderMarkdown", () => {
         code: "unsafe-link-url",
         severity: "warning",
         message: 'Removed unsafe link URL "javascript:alert(1)".',
+        line: 1,
       },
     ]);
     expect(rendered.html).toContain(">bad</a>");
     expect(rendered.html).not.toContain("javascript:");
+    expect(rendered.html).not.toContain("text-decoration:underline");
   });
 
   test("keeps HTTP and relative links with diagnostics", async () => {
@@ -168,6 +171,7 @@ describe("renderMarkdown", () => {
         code: "unsafe-image-url",
         severity: "warning",
         message: 'Removed image with unsafe URL "javascript:alert(1)".',
+        line: 1,
       },
     ]);
     expect(safe.html).toContain('<img src="https://example.com/a.png" alt="Alt" border="0" style=');
@@ -197,6 +201,7 @@ describe("renderMarkdown", () => {
         code: "missing-image-alt",
         severity: "info",
         message: "Image is missing alt text; emitted an empty alt attribute.",
+        line: 1,
       },
     ]);
     expect(countWarnings(rendered.diagnostics)).toBe(0);
@@ -285,6 +290,62 @@ describe("renderMarkdown", () => {
     expect(rendered.html).toContain("white-space:pre-wrap");
     expect(rendered.html).toContain("overflow-wrap:break-word");
     expect(rendered.html).not.toContain("overflow:auto");
+  });
+
+  test("reports each unsafe URL per occurrence with its source line", async () => {
+    const rendered = await renderMarkdown("[a](javascript:alert(1))\n\n[b](javascript:alert(2))", defaultConfig);
+
+    expect(rendered.diagnostics).toEqual([
+      { code: "unsafe-link-url", severity: "warning", message: 'Removed unsafe link URL "javascript:alert(1)".', line: 1 },
+      { code: "unsafe-link-url", severity: "warning", message: 'Removed unsafe link URL "javascript:alert(2)".', line: 3 },
+    ]);
+  });
+
+  test("renders empty-href links as plain text without link styling", async () => {
+    const rendered = await renderMarkdown("Click [here]() now.", defaultConfig);
+
+    expect(rendered.html).toContain(">here</a>");
+    expect(rendered.html).not.toContain("text-decoration:underline");
+    expect(rendered.html).not.toContain("href=");
+  });
+
+  test("warns about wide tables above the column threshold", async () => {
+    const wide = await renderMarkdown(
+      "| a | b | c | d | e | f | g |\n|---|---|---|---|---|---|---|\n| 1 | 2 | 3 | 4 | 5 | 6 | 7 |",
+      defaultConfig,
+    );
+    const narrow = await renderMarkdown(
+      "| a | b | c | d | e | f |\n|---|---|---|---|---|---|\n| 1 | 2 | 3 | 4 | 5 | 6 |",
+      defaultConfig,
+    );
+
+    expect(wide.diagnostics).toEqual([
+      { code: "wide-table", severity: "info", message: "Table has 7 columns; it may be hard to read on narrow mobile screens.", line: 1 },
+    ]);
+    expect(countWarnings(wide.diagnostics)).toBe(0);
+    expect(narrow.diagnostics).toEqual([]);
+  });
+
+  test("emits an info diagnostic when footnotes are present", async () => {
+    const rendered = await renderMarkdown("Text[^1].\n\n[^1]: Note text.", defaultConfig);
+
+    expect(rendered.diagnostics).toContainEqual({
+      code: "footnote-support",
+      severity: "info",
+      message: "Footnotes may render inconsistently across some email clients.",
+    });
+    expect(countWarnings(rendered.diagnostics)).toBe(0);
+  });
+
+  test("warns about long code lines but not short ones", async () => {
+    const long = await renderMarkdown("```\n" + "x".repeat(100) + "\n```", defaultConfig);
+    const short = await renderMarkdown("```\nshort line\n```", defaultConfig);
+
+    expect(long.diagnostics).toEqual([
+      { code: "long-code-line", severity: "info", message: "Code block has long lines (up to 100 characters); they may wrap awkwardly in some clients.", line: 1 },
+    ]);
+    expect(countWarnings(long.diagnostics)).toBe(0);
+    expect(short.diagnostics).toEqual([]);
   });
 });
 

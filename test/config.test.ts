@@ -23,13 +23,13 @@ describe("config", () => {
       markdown: {
         gfm: false,
         frontmatter: false,
-        raw_html: true,
       },
       email: {
         container_width: 720,
         outer_padding: "12px 8px",
         warnings: false,
         strict: true,
+        pretty: true,
       },
       theme: {
         background_color: "#000000",
@@ -85,13 +85,13 @@ describe("config", () => {
       markdown: {
         gfm: false,
         frontmatter: false,
-        rawHtml: true,
       },
       email: {
         containerWidth: 720,
         outerPadding: "12px 8px",
         warnings: false,
         strict: true,
+        pretty: true,
       },
       theme: {
         backgroundColor: "#000000",
@@ -255,6 +255,11 @@ describe("config", () => {
     await writeFile(join(dir, "theme.toml"), "[email]\nstrict = true\n");
     await expect(loadConfig({ cwd: dir, theme: "./theme.toml" })).rejects.toThrow(
       "Invalid theme: email.strict is not allowed.",
+    );
+
+    await writeFile(join(dir, "theme.toml"), "[email]\npretty = true\n");
+    await expect(loadConfig({ cwd: dir, theme: "./theme.toml" })).rejects.toThrow(
+      "Invalid theme: email.pretty is not allowed.",
     );
 
     await writeFile(join(dir, "theme.toml"), "[theme]\nextends = \"base\"\n");
