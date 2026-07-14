@@ -327,7 +327,17 @@ bun run src/cli.ts examples/security-notice.md \
 bun run src/cli.ts examples/theme-customizations.md \
   --config examples/theme-customizations.toml \
   -o examples/theme-customizations-custom.html
+
+# Two personal-note issues sharing one warm serif newsletter config
+bun run src/cli.ts examples/personal-notes-july.md \
+  --config examples/personal-notes.toml \
+  -o examples/personal-notes-july.html
+bun run src/cli.ts examples/personal-notes-august.md \
+  --config examples/personal-notes.toml \
+  -o examples/personal-notes-august.html
 ```
+
+The personal-notes example demonstrates reusing one config across multiple Markdown files. Its serif stack uses common system fonts because custom web fonts are unreliable in email clients.
 
 Reusable example themes:
 
