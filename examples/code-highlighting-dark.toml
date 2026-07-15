@@ -1,0 +1,22 @@
+[markdown]
+gfm = true
+frontmatter = true
+syntax_highlighting = true
+syntax_highlighting_mode = "dark"
+
+[email]
+warnings = true
+strict = true
+pretty = false
+
+[theme]
+background_color = "#0d1117"
+container_background = "#161b22"
+text_color = "#c9d1d9"
+heading_color = "#f0f6fc"
+muted_text_color = "#8b949e"
+link_color = "#58a6ff"
+border_color = "#30363d"
+table_header_background = "#21262d"
+code_background = "#161b22"
+blockquote_border_color = "#3b434b"

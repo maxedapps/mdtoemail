@@ -1,6 +1,7 @@
 import { markdownToHtml, type Features, type Frontmatter } from "satteri";
 import type { Config } from "./config";
 import { emailHastPlugin } from "./email";
+import { codeHighlightPlugin } from "./highlight";
 import type { Diagnostic } from "./diagnostics";
 
 export interface RenderedMarkdown {
@@ -20,7 +21,7 @@ export async function renderMarkdown(markdown: string, config: Config): Promise<
   const diagnostics: Diagnostic[] = [];
   const result = await markdownToHtml(markdown, {
     features: markdownFeatures(config),
-    hastPlugins: [emailHastPlugin(config, diagnostics)],
+    hastPlugins: [emailHastPlugin(config, diagnostics), codeHighlightPlugin(config, diagnostics)],
   });
 
   return {

@@ -23,6 +23,8 @@ describe("config", () => {
       markdown: {
         gfm: false,
         frontmatter: false,
+        syntax_highlighting: true,
+        syntax_highlighting_mode: "dark",
       },
       email: {
         container_width: 720,
@@ -85,6 +87,8 @@ describe("config", () => {
       markdown: {
         gfm: false,
         frontmatter: false,
+        syntaxHighlighting: true,
+        syntaxHighlightingMode: "dark",
       },
       email: {
         containerWidth: 720,
@@ -162,6 +166,15 @@ describe("config", () => {
     );
     expect(() => mergeConfig({ email: { strict: "yes" } })).toThrow(
       "Invalid config: email.strict must be a boolean.",
+    );
+    expect(() => mergeConfig({ markdown: { syntax_highlighting: "yes" } })).toThrow(
+      "Invalid config: markdown.syntax_highlighting must be a boolean.",
+    );
+    expect(() => mergeConfig({ markdown: { syntax_highlighting_mode: "auto" } })).toThrow(
+      'Invalid config: markdown.syntax_highlighting_mode must be "light" or "dark".',
+    );
+    expect(() => mergeConfig({ markdown: { syntax_highlighting_mode: true } })).toThrow(
+      'Invalid config: markdown.syntax_highlighting_mode must be "light" or "dark".',
     );
   });
 
@@ -247,7 +260,7 @@ describe("config", () => {
 
   test("rejects invalid theme files", async () => {
     const dir = await makeTempDir();
-    await writeFile(join(dir, "theme.toml"), "[markdown]\ngfm = false\n");
+    await writeFile(join(dir, "theme.toml"), "[markdown]\nsyntax_highlighting = true\n");
     await expect(loadConfig({ cwd: dir, theme: "./theme.toml" })).rejects.toThrow(
       "Invalid theme: root.markdown is not allowed.",
     );

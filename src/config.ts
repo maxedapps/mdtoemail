@@ -1,9 +1,13 @@
 import { dirname, isAbsolute, join, resolve } from "node:path";
 
+export type SyntaxHighlightingMode = "light" | "dark";
+
 export interface Config {
   markdown: {
     gfm: boolean;
     frontmatter: boolean;
+    syntaxHighlighting: boolean;
+    syntaxHighlightingMode: SyntaxHighlightingMode;
   };
   email: {
     containerWidth: number;
@@ -76,6 +80,8 @@ export const defaultConfig: Config = {
   markdown: {
     gfm: true,
     frontmatter: true,
+    syntaxHighlighting: false,
+    syntaxHighlightingMode: "light",
   },
   email: {
     containerWidth: 600,
@@ -166,6 +172,17 @@ export function mergeConfig(raw: unknown, base: Config = defaultConfig): Config 
     setBoolean(raw.markdown, "frontmatter", "markdown.frontmatter", (value) => {
       config.markdown.frontmatter = value;
     });
+    setBoolean(raw.markdown, "syntax_highlighting", "markdown.syntax_highlighting", (value) => {
+      config.markdown.syntaxHighlighting = value;
+    });
+
+    const syntaxHighlightingMode = raw.markdown.syntax_highlighting_mode;
+    if (syntaxHighlightingMode !== undefined) {
+      if (syntaxHighlightingMode !== "light" && syntaxHighlightingMode !== "dark") {
+        throw new Error('Invalid config: markdown.syntax_highlighting_mode must be "light" or "dark".');
+      }
+      config.markdown.syntaxHighlightingMode = syntaxHighlightingMode;
+    }
   }
 
   if (raw.email !== undefined) {

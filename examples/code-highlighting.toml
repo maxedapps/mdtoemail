@@ -1,0 +1,10 @@
+[markdown]
+gfm = true
+frontmatter = true
+syntax_highlighting = true
+syntax_highlighting_mode = "light"
+
+[email]
+warnings = true
+strict = true
+pretty = false

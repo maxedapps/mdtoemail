@@ -3,6 +3,7 @@ import { defineHastPlugin, type HastPluginInput } from "satteri";
 import type { Element, Text } from "hast";
 import type { Config } from "./config";
 import { addDiagnostic, addDiagnosticOnce, type Diagnostic } from "./diagnostics";
+import { displayColumns } from "./highlight";
 
 const allowedElements = new Set([
   "p",
@@ -264,8 +265,8 @@ function applySafeProperties(
     if (longest > maxComfortableCodeLine) {
       report(diagnostics, line, {
         code: "long-code-line",
-        severity: "info",
-        message: `Code block has long lines (up to ${longest} characters); they may wrap awkwardly in some clients.`,
+        severity: "warning",
+        message: `Code block has long lines (up to ${longest} display columns); they may wrap awkwardly in some clients.`,
       });
     }
   }
@@ -507,7 +508,8 @@ function findFirstRow(node: Readonly<Element>): Element | undefined {
 function longestCodeLine(pre: Readonly<Element>): number {
   let max = 0;
   for (const codeLine of collectText(pre).split("\n")) {
-    if (codeLine.length > max) max = codeLine.length;
+    const columns = displayColumns(codeLine);
+    if (columns > max) max = columns;
   }
   return max;
 }

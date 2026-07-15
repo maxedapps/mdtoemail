@@ -4,7 +4,7 @@ import { dirname, extname, basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import packageJson from "../package.json";
 import { loadConfig, type Config } from "./config";
-import { countWarnings, formatDiagnostic, type Diagnostic } from "./diagnostics";
+import { addFinalHtmlSizeDiagnostic, countWarnings, formatDiagnostic, type Diagnostic } from "./diagnostics";
 import { renderEmailDocument } from "./email";
 import { renderMarkdown, type RenderedMarkdown } from "./markdown";
 
@@ -71,14 +71,14 @@ async function main(): Promise<void> {
   );
   const markdown = await readInput(input);
   const rendered = await renderInputMarkdown(markdown, config);
+  const html = renderEmailDocument(rendered.html, input, config);
+  addFinalHtmlSizeDiagnostic(html, rendered.diagnostics);
   printDiagnostics(rendered.diagnostics, config);
 
   const warningCount = countWarnings(rendered.diagnostics);
   if (config.email.strict && warningCount > 0) {
     throw new Error(`Strict mode failed with ${warningCount} warning(s).`);
   }
-
-  const html = renderEmailDocument(rendered.html, input, config);
 
   try {
     await Bun.write(output, html);

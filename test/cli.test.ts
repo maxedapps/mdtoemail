@@ -110,6 +110,61 @@ describe("CLI", () => {
     await expectFileExists(output);
   });
 
+  test("strict highlighted conversion fails before writing for invalid metadata", async () => {
+    const { dir, input, output } = await writeInput("```ts {1-999999999} lineNumbers\nconst x = 1;\n```");
+    const config = join(dir, "mdtoemail.toml");
+    await writeFile(config, "[markdown]\nsyntax_highlighting = true\n[email]\nstrict = true\n");
+
+    const result = runCli(input, "--config", config, "-o", output);
+
+    expect(result.exitCode).not.toBe(0);
+    expect(stderr(result)).toContain("Warning [invalid-code-highlight]");
+    expect(stderr(result)).toContain("Strict mode failed with 1 warning(s).");
+    await expectFileMissing(output);
+  });
+
+  test("evaluates final document size before diagnostics and strict no-write", async () => {
+    const { input, output } = await writeInput("x".repeat(87_000));
+
+    const result = runCli(input, "--strict", "-o", output);
+
+    expect(result.exitCode).not.toBe(0);
+    expect(stderr(result)).toContain("Warning [large-email-html]");
+    expect(stderr(result)).toContain("Strict mode failed with 1 warning(s).");
+    await expectFileMissing(output);
+  });
+
+  test("strict mode renders the fixed dark highlighting profile", async () => {
+    const { dir, input, output } = await writeInput("```ts {1} lineNumbers\nconst x: number = 1;\n```");
+    const config = join(dir, "mdtoemail.toml");
+    await writeFile(
+      config,
+      '[markdown]\nsyntax_highlighting = true\nsyntax_highlighting_mode = "dark"\n[email]\nstrict = true\n',
+    );
+
+    const result = runCli(input, "--config", config, "-o", output);
+
+    expect(result.exitCode).toBe(0);
+    expect(stderr(result)).toBe("");
+    const html = await readFile(output, "utf8");
+    expect(html).toContain('bgcolor="#0d1117"');
+    expect(html).toContain('bgcolor="#3b3424"');
+    expect(html).toContain("color:#8b949e");
+    expect(html).toContain("color:#ff7b72");
+  });
+
+  test("strict mode succeeds for unsupported highlighted language info fallback", async () => {
+    const { dir, input, output } = await writeInput("```ruby\nputs 'safe'\n```");
+    const config = join(dir, "mdtoemail.toml");
+    await writeFile(config, "[markdown]\nsyntax_highlighting = true\n[email]\nstrict = true\n");
+
+    const result = runCli(input, "--config", config, "-o", output);
+
+    expect(result.exitCode).toBe(0);
+    expect(stderr(result)).toContain("Info [unsupported-code-language]");
+    expect(await readFile(output, "utf8")).toContain("<pre style=");
+  });
+
   test("strict mode succeeds for info-only diagnostics", async () => {
     const { input, output } = await writeInput("- [x] Done\n\n![](https://example.com/a.png)\n\n[rel](/pricing)");
 

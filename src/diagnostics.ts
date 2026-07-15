@@ -13,7 +13,12 @@ export type DiagnosticCode =
   | "task-list-input-transformed"
   | "wide-table"
   | "footnote-support"
-  | "long-code-line";
+  | "long-code-line"
+  | "unsupported-code-language"
+  | "code-highlighting-skipped"
+  | "invalid-code-highlight"
+  | "code-highlighting-failed"
+  | "large-email-html";
 
 export interface Diagnostic {
   code: DiagnosticCode;
@@ -33,6 +38,17 @@ export function addDiagnosticOnce(diagnostics: Diagnostic[], diagnostic: Diagnos
 
 export function countWarnings(diagnostics: readonly Diagnostic[]): number {
   return diagnostics.filter((diagnostic) => diagnostic.severity === "warning").length;
+}
+
+export function addFinalHtmlSizeDiagnostic(html: string, diagnostics: Diagnostic[]): void {
+  const bytes = Buffer.byteLength(html, "utf8");
+  if (bytes < 85 * 1024) return;
+
+  addDiagnostic(diagnostics, {
+    code: "large-email-html",
+    severity: "warning",
+    message: `Generated HTML is ${bytes} bytes; email clients may clip messages at this size.`,
+  });
 }
 
 export function formatDiagnostic(diagnostic: Diagnostic): string {

@@ -1,6 +1,10 @@
 [markdown]
 gfm = true
 frontmatter = true
+# Opt in to fixed-profile syntax highlighting for supported fenced code languages.
+syntax_highlighting = false
+# Select the coherent fixed token/surface profile per mail: "light" or "dark".
+syntax_highlighting_mode = "light"
 
 [email]
 container_width = 600

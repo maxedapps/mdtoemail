@@ -292,6 +292,54 @@ describe("renderMarkdown", () => {
     expect(rendered.html).not.toContain("overflow:auto");
   });
 
+  test("renders opt-in highlighted blocks after sanitization with fixed controlled markup", async () => {
+    const rendered = await renderMarkdown(
+      "```ts {1} lineNumbers\n\tconst source = '<script data-x=\\\"y\\\">&</script>';\n\n```",
+      withMarkdownConfig({ syntaxHighlighting: true }),
+    );
+
+    expect(rendered.diagnostics).toEqual([]);
+    expect(rendered.html).toContain('<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#f6f8fa"');
+    expect(rendered.html).toContain('aria-hidden="true" align="right" valign="top" width="40"');
+    expect(rendered.html).toContain('bgcolor="#fff8c5"');
+    expect(rendered.html).toContain("\u00a0\u00a0\u00a0\u00a0");
+    expect(rendered.html).toContain("&lt;script");
+    expect(rendered.html).toContain("&amp;");
+    expect(rendered.html).toContain("<br>");
+    expect(rendered.html).not.toContain("<pre");
+    expect(rendered.html).not.toMatch(/<(?:style|script)\b/i);
+    expect(rendered.html).not.toMatch(/<(?:table|tbody|tr|td|code|span|br)\b[^>]*\s(?:class|data-[\w-]+|on[\w-]+)=/i);
+    expect(rendered.html).not.toContain("var(");
+  });
+
+  test("keeps inline code and raw HTML policies unchanged when highlighting is enabled", async () => {
+    const rendered = await renderMarkdown(
+      "Use `const x = 1` and <span style=\"color:red\">raw</span>.\n\n```ts\nconst x = 1;\n```",
+      withMarkdownConfig({ syntaxHighlighting: true }),
+    );
+
+    expect(rendered.diagnostics).toContainEqual({
+      code: "raw-html-escaped",
+      severity: "warning",
+      message: "Escaped raw HTML because arbitrary HTML is not supported in email-safe output.",
+      line: 1,
+    });
+    expect(rendered.html).toContain(`<code style="background:${defaultConfig.theme.codeBackground}`);
+    expect(rendered.html).toContain('&lt;span style="color:red"&gt;raw&lt;/span&gt;');
+    expect(rendered.html).not.toContain('<span style="color:red">raw</span>');
+    expect(rendered.html).toContain('<table role="presentation"');
+  });
+
+  test("keeps the default-off fenced-code output byte-equivalent to explicit disabled config", async () => {
+    const markdown = "```ts {1} lineNumbers\nconst x = 1;\n```";
+    const defaultRendered = await renderMarkdown(markdown, defaultConfig);
+    const disabledRendered = await renderMarkdown(markdown, withMarkdownConfig({ syntaxHighlighting: false }));
+
+    expect(defaultRendered).toEqual(disabledRendered);
+    expect(defaultRendered.html).toContain("<pre style=");
+    expect(defaultRendered.html).not.toContain('role="presentation"');
+  });
+
   test("reports each unsafe URL per occurrence with its source line", async () => {
     const rendered = await renderMarkdown("[a](javascript:alert(1))\n\n[b](javascript:alert(2))", defaultConfig);
 
@@ -342,9 +390,9 @@ describe("renderMarkdown", () => {
     const short = await renderMarkdown("```\nshort line\n```", defaultConfig);
 
     expect(long.diagnostics).toEqual([
-      { code: "long-code-line", severity: "info", message: "Code block has long lines (up to 100 characters); they may wrap awkwardly in some clients.", line: 1 },
+      { code: "long-code-line", severity: "warning", message: "Code block has long lines (up to 100 display columns); they may wrap awkwardly in some clients.", line: 1 },
     ]);
-    expect(countWarnings(long.diagnostics)).toBe(0);
+    expect(countWarnings(long.diagnostics)).toBe(1);
     expect(short.diagnostics).toEqual([]);
   });
 });

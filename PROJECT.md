@@ -4,7 +4,7 @@
 
 Build a modern, very fast **Markdown → email-friendly HTML** converter as a Bun + TypeScript CLI.
 
-The tool should take a `.md` file as input and produce conservative HTML that works reliably across major email clients. It should focus only on conversion — **no sending server, no bounce/complaint handling, no webhook system**.
+The tool should take a `.md` file as input and produce conservative HTML designed for reliable rendering across major email clients. Individual opt-in features may remain best-effort until separately qualified. It should focus only on conversion — **no sending server, no bounce/complaint handling, no webhook system**.
 
 ## Product Scope
 
@@ -15,9 +15,10 @@ The tool should take a `.md` file as input and produce conservative HTML that wo
 - Clean default email styling.
 - Theme/style customization through safe config options.
 - Configurable Markdown features, especially GFM.
-- Conservative, broadly compatible email HTML.
+- Conservative email HTML designed for broad compatibility; opt-in syntax highlighting remains best-effort and unqualified.
 - Inline styles by default.
 - Diagnostics/warnings for email-compatibility issues.
+- Opt-in syntax and line highlighting rendered as conservative email markup.
 - Optional support for email-specific Markdown extensions such as buttons/callouts.
 
 ### Out of scope
@@ -35,12 +36,12 @@ Users should send the generated HTML through their own app, SMTP setup, or provi
 
 ## Recommended Positioning
 
-> A fast Bun-powered Markdown to email HTML compiler that outputs conservative, broadly compatible email markup, with configurable Markdown features and safe TOML-based theming.
+> A fast Bun-powered Markdown to email HTML compiler that outputs conservative markup designed for broad compatibility, with configurable Markdown features and safe TOML-based theming.
 
 Avoid overpromising “works in every email client” or “full Markdown compatibility” initially. Better wording:
 
-- “email-safe by default”
-- “broadly compatible conservative HTML”
+- “conservative email markup by default”
+- “designed for broad compatibility”
 - “GFM-capable”
 - “optimized for transactional/newsletter email markup”
 
@@ -307,6 +308,8 @@ Email clients remain very constrained. Prefer:
 - no video/audio
 - no CSS variables
 - no flex/grid for critical layout
+
+Opt-in code highlighting uses build-time Shiki tokenization rendered as project-controlled inline spans and presentation-table rows. Each generated mail may select a fixed coherent light or dark syntax profile; arbitrary palettes and recipient-driven automatic switching remain unsupported. The renderer does not admit arbitrary HTML or browser widgets, and its email-client compatibility remains best-effort and unqualified because no full client matrix was run. Copy buttons and other interactive code features remain deferred.
 
 Suggested outer wrapper:
 

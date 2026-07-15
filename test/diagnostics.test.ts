@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   addDiagnostic,
   addDiagnosticOnce,
+  addFinalHtmlSizeDiagnostic,
   countWarnings,
   formatDiagnostic,
   type Diagnostic,
@@ -74,6 +75,24 @@ describe("diagnostics", () => {
         message: "Converted task list.",
       }),
     ).toBe("Info [task-list-input-transformed]: Converted task list.");
+  });
+
+  test("adds the final HTML size warning at the exact UTF-8 boundary", () => {
+    const below: Diagnostic[] = [];
+    const exactAscii: Diagnostic[] = [];
+    const exactMultibyte: Diagnostic[] = [];
+
+    addFinalHtmlSizeDiagnostic("x".repeat(85 * 1024 - 1), below);
+    addFinalHtmlSizeDiagnostic("x".repeat(85 * 1024), exactAscii);
+    addFinalHtmlSizeDiagnostic("é".repeat((85 * 1024) / 2), exactMultibyte);
+
+    expect(below).toEqual([]);
+    expect(exactAscii).toEqual([{
+      code: "large-email-html",
+      severity: "warning",
+      message: "Generated HTML is 87040 bytes; email clients may clip messages at this size.",
+    }]);
+    expect(exactMultibyte).toEqual(exactAscii);
   });
 
   test("appends the source line when present", () => {
