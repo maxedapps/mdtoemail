@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
+import { compileMarkdownEmail } from "../src/compiler";
+import { loadConfig } from "../src/config-loader";
 
 const tempDirs: string[] = [];
 const textDecoder = new TextDecoder();
@@ -234,6 +236,19 @@ describe("CLI", () => {
     const html = await readFile(output, "utf8");
     expect(html).toContain("color:#111111");
     expect(html).not.toContain("#f59e0b");
+  });
+
+  test("CLI HTML matches compileMarkdownEmail for the same source, config, and title", async () => {
+    const markdown = "# Hello\n\nSee [docs](https://example.com) and [bad](javascript:alert(1)).";
+    const { dir, input, output } = await writeInput(markdown);
+
+    const result = runCli(input, "-o", output, { cwd: dir });
+
+    expect(result.exitCode).toBe(0);
+
+    const config = await loadConfig({ cwd: dir });
+    const compiled = await compileMarkdownEmail(markdown, { title: basename(input), config });
+    expect(await readFile(output, "utf8")).toBe(compiled.html);
   });
 
   test("missing --theme fails cleanly", async () => {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { defaultConfig, type Config } from "../src/config";
 import { countWarnings } from "../src/diagnostics";
-import { markdownFeatures, renderMarkdown } from "../src/markdown";
+import { renderMarkdown } from "../src/markdown";
 
 describe("renderMarkdown", () => {
   test("renders and styles CommonMark basics", async () => {
@@ -22,13 +22,6 @@ describe("renderMarkdown", () => {
     expect(rendered.html).toContain('href="https://example.com"');
     expect(rendered.html).toContain(`style="color:${defaultConfig.theme.linkColor};text-decoration:underline"`);
     expect(rendered.html).toContain(">Site</a>");
-  });
-
-  test("maps markdown config to Sätteri features", () => {
-    expect(markdownFeatures(withMarkdownConfig({ gfm: false, frontmatter: false }))).toEqual({
-      gfm: false,
-      frontmatter: false,
-    });
   });
 
   test("renders and styles GFM tables with legacy attributes", async () => {
@@ -93,6 +86,14 @@ describe("renderMarkdown", () => {
     expect(rendered.html).not.toContain("title: Test");
   });
 
+  test("extracts TOML frontmatter when enabled", async () => {
+    const rendered = await renderMarkdown("+++\ntitle = \"Test\"\n+++\n# Hi", defaultConfig);
+
+    expect(rendered.frontmatter).toEqual({ kind: "toml", value: "title = \"Test\"" });
+    expect(rendered.html).toContain(">Hi</h1>");
+    expect(rendered.html).not.toContain("title = \"Test\"");
+  });
+
   test("treats frontmatter delimiters as Markdown when frontmatter is disabled", async () => {
     const rendered = await renderMarkdown(
       "---\ntitle: Test\n---\n# Hi",
@@ -117,8 +118,9 @@ describe("renderMarkdown", () => {
       },
     ]);
     expect(script.diagnostics).toEqual(inline.diagnostics);
-    expect(inline.html).toContain("a &lt;em&gt;x&lt;/em&gt; b");
-    expect(script.html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
+    // rehype-stringify encodes `<`/`&` in text (HTML-equivalent to also encoding `>`).
+    expect(inline.html).toContain("a &lt;em>x&lt;/em> b");
+    expect(script.html).toContain("&lt;script>alert(1)&lt;/script>");
     expect(script.html).not.toContain("<script>");
   });
 
@@ -325,7 +327,7 @@ describe("renderMarkdown", () => {
       line: 1,
     });
     expect(rendered.html).toContain(`<code style="background:${defaultConfig.theme.codeBackground}`);
-    expect(rendered.html).toContain('&lt;span style="color:red"&gt;raw&lt;/span&gt;');
+    expect(rendered.html).toContain('&lt;span style="color:red">raw&lt;/span>');
     expect(rendered.html).not.toContain('<span style="color:red">raw</span>');
     expect(rendered.html).toContain('<table role="presentation"');
   });

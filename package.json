@@ -1,14 +1,22 @@
 {
   "name": "mdtoemail",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Fast Markdown to conservative email-friendly HTML converter",
   "license": "MIT",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "bin": {
-    "mdtoemail": "./src/cli.ts"
+    "mdtoemail": "./dist/cli.js"
   },
   "files": [
-    "src",
+    "dist",
     "examples",
     "README.md",
     "LICENSE",
@@ -18,19 +26,26 @@
     "dev": "bun run src/cli.ts",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit",
-    "build": "bun build ./src/cli.ts --target=bun --outdir=dist"
+    "build": "rm -rf dist && bunx tsc -p tsconfig.build.json && bun build ./src/cli.ts --target=bun --outdir=dist",
+    "test:candidate": "bun run test/package-candidate.ts"
   },
   "dependencies": {
     "@shikijs/core": "4.3.1",
     "@shikijs/engine-javascript": "4.3.1",
     "@shikijs/langs": "4.3.1",
     "@shikijs/themes": "4.3.1",
-    "satteri": "0.9.4"
+    "rehype-stringify": "10.0.1",
+    "remark-frontmatter": "5.0.0",
+    "remark-gfm": "4.0.1",
+    "remark-parse": "11.0.0",
+    "remark-rehype": "11.1.2",
+    "unified": "11.0.5"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",
     "parse5": "8.0.1",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "wrangler": "4.123.0"
   },
   "packageManager": "bun@1.3.14"
 }

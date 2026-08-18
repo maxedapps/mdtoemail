@@ -1,6 +1,4 @@
-import { basename } from "node:path";
-import { defineHastPlugin, type HastPluginInput } from "satteri";
-import type { Element, Text } from "hast";
+import type { Element, ElementContent, Root, RootContent, Text } from "hast";
 import type { Config } from "./config";
 import { addDiagnostic, addDiagnosticOnce, type Diagnostic } from "./diagnostics";
 import { displayColumns } from "./highlight";
@@ -40,69 +38,15 @@ const allowedElements = new Set([
 const maxComfortableTableColumns = 6;
 const maxComfortableCodeLine = 80;
 
-export function emailHastPlugin(config: Config, diagnostics: Diagnostic[] = []): HastPluginInput {
-  return defineHastPlugin({
-    name: "email-sanitizer",
-    element: {
-      filter: [],
-      visit(node, ctx) {
-        const line = lineOf(node);
-
-        if (node.tagName === "input") {
-          if (isCheckbox(node.properties)) {
-            reportOnce(diagnostics, line, {
-              code: "task-list-input-transformed",
-              severity: "info",
-              message: "Converted task-list checkbox inputs to plain text symbols for email compatibility.",
-            });
-            return { type: "text", value: isCheckedCheckbox(node.properties) ? "☑ " : "☐ " };
-          }
-
-          report(diagnostics, line, {
-            code: "unsupported-element",
-            severity: "warning",
-            message: "Removed unsupported <input> element.",
-          });
-          ctx.removeNode(node);
-          return;
-        }
-
-        if (node.tagName === "section") {
-          replaceSectionWithDiv(node, ctx, config, diagnostics, line);
-          return;
-        }
-
-        if (!allowedElements.has(node.tagName)) {
-          report(diagnostics, line, {
-            code: "unsupported-element",
-            severity: "warning",
-            message: `Removed unsupported <${node.tagName}> element.`,
-          });
-          ctx.removeNode(node);
-          return;
-        }
-
-        const originalProperties = { ...node.properties };
-        stripProperties(node, ctx);
-        applySafeProperties(node, originalProperties, ctx, config, diagnostics, line);
-      },
-    },
-    raw(node) {
-      reportOnce(diagnostics, lineOf(node), {
-        code: "raw-html-escaped",
-        severity: "warning",
-        message: "Escaped raw HTML because arbitrary HTML is not supported in email-safe output.",
-      });
-      return { type: "text", value: node.value };
-    },
-  });
+export function sanitizeEmailHast(tree: Root, config: Config, diagnostics: Diagnostic[] = []): void {
+  transformChildren(tree, config, diagnostics);
 }
 
 const contentIndent = 16;
 
-export function renderEmailDocument(contentHtml: string, inputPath: string, config: Config): string {
+export function renderEmailDocument(contentHtml: string, title: string, config: Config): string {
   const width = config.email.containerWidth;
-  const title = Bun.escapeHTML(basename(inputPath));
+  const escapedTitle = escapeHtml(title);
   const content = config.email.pretty ? indentContent(contentHtml, contentIndent) : contentHtml;
   const backgroundColor = legacyColorAttribute(config.theme.backgroundColor);
   const containerBackground = legacyColorAttribute(config.theme.containerBackground);
@@ -142,7 +86,7 @@ export function renderEmailDocument(contentHtml: string, inputPath: string, conf
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width">
-    <title>${title}</title>
+    <title>${escapedTitle}</title>
   </head>
   <body style="${bodyStyle}">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"${backgroundColor ? ` bgcolor="${backgroundColor}"` : ""} style="${outerTableStyle}">
@@ -177,15 +121,154 @@ type UrlDecision =
   | { action: "remove"; diagnostic: Diagnostic; fallbackText?: string };
 
 interface ElementMutationContext {
-  setProperty(node: Readonly<Element>, key: string, value: unknown): void;
+  removed: boolean;
+  replaced: boolean;
+  setProperty(node: Element, key: string, value: unknown): void;
   removeNode(node: Readonly<Element>): void;
   replaceNode(node: Readonly<Element>, newNode: Element | Text): void;
 }
 
-function stripProperties(node: Readonly<Element>, ctx: ElementMutationContext): void {
-  for (const key of Object.keys(node.properties)) {
-    ctx.setProperty(node, key, undefined);
+interface RawNode {
+  type: "raw";
+  value: string;
+  position?: { start: { line: number } };
+}
+
+type HastParent = Root | Element;
+type HastChild = RootContent | ElementContent | RawNode;
+
+function transformChildren(parent: HastParent, config: Config, diagnostics: Diagnostic[]): void {
+  let index = 0;
+  while (index < parent.children.length) {
+    const action = transformChild(parent.children[index] as HastChild, parent, index, config, diagnostics);
+    if (action === "removed") continue;
+    index += 1;
   }
+}
+
+function transformChild(
+  node: HastChild,
+  parent: HastParent,
+  index: number,
+  config: Config,
+  diagnostics: Diagnostic[],
+): "kept" | "removed" | "replaced" {
+  if (isRaw(node)) {
+    reportOnce(diagnostics, lineOf(node), {
+      code: "raw-html-escaped",
+      severity: "warning",
+      message: "Escaped raw HTML because arbitrary HTML is not supported in email-safe output.",
+    });
+    parent.children[index] = { type: "text", value: node.value };
+    return "replaced";
+  }
+
+  if (node.type !== "element") return "kept";
+
+  const ctx = mutationContext(parent, index);
+  const line = lineOf(node);
+
+  if (node.tagName === "code") {
+    copyFencedCodeData(node);
+  }
+
+  if (node.tagName === "input") {
+    if (isCheckbox(node.properties)) {
+      reportOnce(diagnostics, line, {
+        code: "task-list-input-transformed",
+        severity: "info",
+        message: "Converted task-list checkbox inputs to plain text symbols for email compatibility.",
+      });
+      parent.children[index] = { type: "text", value: isCheckedCheckbox(node.properties) ? "☑ " : "☐ " };
+      return "replaced";
+    }
+
+    report(diagnostics, line, {
+      code: "unsupported-element",
+      severity: "warning",
+      message: "Removed unsupported <input> element.",
+    });
+    parent.children.splice(index, 1);
+    return "removed";
+  }
+
+  if (node.tagName === "section") {
+    replaceSectionWithDiv(node, ctx, config, diagnostics, line);
+    const replacement = parent.children[index];
+    if (replacement?.type === "element") {
+      transformChildren(replacement, config, diagnostics);
+    }
+    return "replaced";
+  }
+
+  if (!allowedElements.has(node.tagName)) {
+    report(diagnostics, line, {
+      code: "unsupported-element",
+      severity: "warning",
+      message: `Removed unsupported <${node.tagName}> element.`,
+    });
+    parent.children.splice(index, 1);
+    return "removed";
+  }
+
+  const originalProperties = { ...node.properties };
+  stripProperties(node, ctx);
+  applySafeProperties(node, originalProperties, ctx, config, diagnostics, line);
+
+  if (ctx.removed) return "removed";
+  if (ctx.replaced) return "replaced";
+
+  transformChildren(node, config, diagnostics);
+  return "kept";
+}
+
+function mutationContext(parent: HastParent, index: number): ElementMutationContext {
+  return {
+    removed: false,
+    replaced: false,
+    setProperty(node, key, value) {
+      if (value === undefined) {
+        delete node.properties[key];
+        return;
+      }
+      node.properties[key] = value as Element["properties"][string];
+    },
+    removeNode() {
+      parent.children.splice(index, 1);
+      this.removed = true;
+    },
+    replaceNode(_node, newNode) {
+      parent.children[index] = newNode;
+      this.replaced = true;
+    },
+  };
+}
+
+function copyFencedCodeData(node: Element): void {
+  const data = { ...(node.data as Record<string, unknown> | undefined) };
+  if (typeof data.lang !== "string" || data.lang.length === 0) {
+    const language = languageFromClassName(node.properties.className);
+    if (language) data.lang = language;
+  }
+  node.data = data;
+}
+
+function languageFromClassName(value: unknown): string | undefined {
+  const names = Array.isArray(value) ? value : typeof value === "string" ? value.split(/\s+/) : [];
+  for (const name of names) {
+    if (typeof name === "string" && name.startsWith("language-") && name.length > "language-".length) {
+      return name.slice("language-".length);
+    }
+  }
+  return undefined;
+}
+
+function isRaw(node: HastChild): node is RawNode {
+  return node.type === "raw";
+}
+
+function stripProperties(node: Element, _ctx: ElementMutationContext): void {
+  node.properties = {};
 }
 
 function applySafeProperties(
@@ -201,7 +284,7 @@ function applySafeProperties(
     ctx.setProperty(node, "id", id);
   }
 
-  const textAlign = textAlignFromStyle(originalProperties.style);
+  const textAlign = textAlignFromProperties(originalProperties);
   let linkKept = true;
 
   if (node.tagName === "a") {
@@ -539,6 +622,14 @@ function isScreenReaderOnly(value: unknown): boolean {
   return Array.isArray(value) ? value.includes("sr-only") : value === "sr-only";
 }
 
+function textAlignFromProperties(properties: Record<string, unknown>): "left" | "right" | "center" | undefined {
+  const fromStyle = textAlignFromStyle(properties.style);
+  if (fromStyle) return fromStyle;
+
+  const align = properties.align;
+  return align === "left" || align === "right" || align === "center" ? align : undefined;
+}
+
 function textAlignFromStyle(value: unknown): "left" | "right" | "center" | undefined {
   if (typeof value !== "string") return undefined;
 
@@ -613,8 +704,17 @@ function legacyColorAttribute(value: string): string | undefined {
   return escapeAttributeValue(trimmed);
 }
 
+function escapeHtml(value: string | number): string {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#x27;");
+}
+
 function escapeAttributeValue(value: string | number): string {
-  return Bun.escapeHTML(String(value));
+  return escapeHtml(value);
 }
 
 function rawStyleAttribute(styles: Record<string, string | number | undefined>): string {
@@ -625,7 +725,7 @@ function rawStyleAttribute(styles: Record<string, string | number | undefined>):
 }
 
 function escapedStyleAttribute(styles: Record<string, string | number | undefined>): string {
-  return Bun.escapeHTML(rawStyleAttribute(styles));
+  return escapeHtml(rawStyleAttribute(styles));
 }
 
 function toKebabCase(value: string): string {

@@ -41,7 +41,7 @@ export function countWarnings(diagnostics: readonly Diagnostic[]): number {
 }
 
 export function addFinalHtmlSizeDiagnostic(html: string, diagnostics: Diagnostic[]): void {
-  const bytes = Buffer.byteLength(html, "utf8");
+  const bytes = new TextEncoder().encode(html).byteLength;
   if (bytes < 85 * 1024) return;
 
   addDiagnostic(diagnostics, {

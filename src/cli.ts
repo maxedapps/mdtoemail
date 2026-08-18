@@ -3,10 +3,10 @@
 import { dirname, extname, basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import packageJson from "../package.json";
-import { loadConfig, type Config } from "./config";
-import { addFinalHtmlSizeDiagnostic, countWarnings, formatDiagnostic, type Diagnostic } from "./diagnostics";
-import { renderEmailDocument } from "./email";
-import { renderMarkdown, type RenderedMarkdown } from "./markdown";
+import { compileMarkdownEmail } from "./compiler";
+import type { Config } from "./config";
+import { loadConfig } from "./config-loader";
+import { countWarnings, formatDiagnostic, type Diagnostic } from "./diagnostics";
 
 const helpText = `Usage: mdtoemail [options] <input.md>
 
@@ -70,18 +70,16 @@ async function main(): Promise<void> {
     values,
   );
   const markdown = await readInput(input);
-  const rendered = await renderInputMarkdown(markdown, config);
-  const html = renderEmailDocument(rendered.html, input, config);
-  addFinalHtmlSizeDiagnostic(html, rendered.diagnostics);
-  printDiagnostics(rendered.diagnostics, config);
+  const compiled = await compileMarkdownEmail(markdown, { title: basename(input), config });
+  printDiagnostics(compiled.diagnostics, config);
 
-  const warningCount = countWarnings(rendered.diagnostics);
+  const warningCount = countWarnings(compiled.diagnostics);
   if (config.email.strict && warningCount > 0) {
     throw new Error(`Strict mode failed with ${warningCount} warning(s).`);
   }
 
   try {
-    await Bun.write(output, html);
+    await Bun.write(output, compiled.html);
   } catch (error) {
     throw new Error(`Could not write output file "${output}". ${messageFrom(error)}`);
   }
@@ -118,14 +116,6 @@ async function readInput(path: string): Promise<string> {
   }
 }
 
-async function renderInputMarkdown(markdown: string, config: Config): Promise<RenderedMarkdown> {
-  try {
-    return await renderMarkdown(markdown, config);
-  } catch (error) {
-    throw new Error(`Could not render Markdown. ${messageFrom(error)}`);
-  }
-}
-
 function applyCliOverrides(config: Config, values: ReturnType<typeof parseCliArgs>["values"]): Config {
   return {
     ...config,
@@ -138,7 +128,7 @@ function applyCliOverrides(config: Config, values: ReturnType<typeof parseCliArg
   };
 }
 
-function printDiagnostics(diagnostics: Diagnostic[], config: Config): void {
+function printDiagnostics(diagnostics: readonly Diagnostic[], config: Config): void {
   if (!config.email.warnings) return;
 
   for (const diagnostic of diagnostics) {

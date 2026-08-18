@@ -1,8 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { defineHastPlugin, markdownToHtml } from "satteri";
+import type { Root } from "hast";
 import { defaultConfig, type Config } from "../src/config";
-import { type Diagnostic } from "../src/diagnostics";
-import { emailHastPlugin } from "../src/email";
 import {
   DEFAULT_TAB_WIDTH,
   EMAIL_CODE_PROFILE,
@@ -13,7 +11,6 @@ import {
   MAX_DISPLAY_COLUMNS,
   MAX_HIGHLIGHT_TOKENS,
   SUPPORTED_CODE_LANGUAGES,
-  codeHighlightPlugin,
   defaultCodeTokenizer,
   displayColumns,
   parseCodeMeta,
@@ -23,6 +20,7 @@ import {
   type HighlightToken,
   type SupportedCodeLanguage,
 } from "../src/highlight";
+import { renderMarkdown } from "../src/markdown";
 
 const aliases: Record<string, SupportedCodeLanguage> = {
   bash: "bash",
@@ -309,7 +307,7 @@ describe("codeHighlightPlugin", () => {
     expect(rendered.html).not.toContain("#fff8c5");
   });
 
-  test("removes exactly one Sätteri terminal newline and pins empty/trailing logical lines", async () => {
+  test("removes exactly one fenced-code terminal newline and pins empty/trailing logical lines", async () => {
     const seen: string[] = [];
     const tokenizer: CodeTokenizer = {
       async tokenize(code) {
@@ -354,27 +352,15 @@ describe("codeHighlightPlugin", () => {
   });
 
   test("preserves noncanonical claimed blocks and reports their source line", async () => {
-    const diagnostics: Diagnostic[] = [];
-    const makeNoncanonical = defineHastPlugin({
-      name: "make-code-noncanonical",
-      element: {
-        filter: ["pre"],
-        visit(node, ctx) {
-          ctx.appendChild(node, { type: "text", value: "extra" });
-        },
+    const result = await renderMarkdown("intro\n\n```ts\nx\n```", highlightingConfig(), {
+      beforeHighlight(tree) {
+        appendTextToFirstPre(tree, "extra");
       },
-    });
-    const result = await markdownToHtml("intro\n\n```ts\nx\n```", {
-      hastPlugins: [
-        emailHastPlugin(highlightingConfig(), diagnostics),
-        makeNoncanonical,
-        codeHighlightPlugin(highlightingConfig(), diagnostics),
-      ],
     });
 
     expect(result.html).toContain("<pre");
     expect(result.html).toContain("x\n</code>extra</pre>");
-    expect(diagnostics).toEqual([{
+    expect(result.diagnostics).toEqual([{
       code: "code-highlighting-failed",
       severity: "warning",
       message: "Could not highlight ts code because the code block structure was not canonical; preserved the plain code block.",
@@ -518,9 +504,23 @@ const highlightingConfig = (syntaxHighlightingMode: Config["markdown"]["syntaxHi
 });
 
 async function renderWithTokenizer(markdown: string, tokenizer: CodeTokenizer, config = highlightingConfig()) {
-  const diagnostics: Diagnostic[] = [];
-  const result = await markdownToHtml(markdown, {
-    hastPlugins: [emailHastPlugin(config, diagnostics), codeHighlightPlugin(config, diagnostics, tokenizer)],
-  });
-  return { html: result.html, diagnostics };
+  return renderMarkdown(markdown, config, { tokenizer });
+}
+
+function appendTextToFirstPre(tree: Root, value: string): void {
+  const pre = findPre(tree);
+  if (!pre) throw new Error("expected a fenced code block");
+  pre.children.push({ type: "text", value });
+}
+
+function findPre(node: { type: string; tagName?: string; children?: readonly unknown[] }): Extract<Root["children"][number], { type: "element" }> | undefined {
+  if (node.type === "element" && node.tagName === "pre") {
+    return node as Extract<Root["children"][number], { type: "element" }>;
+  }
+  if (!node.children) return undefined;
+  for (const child of node.children) {
+    const match = findPre(child as { type: string; tagName?: string; children?: readonly unknown[] });
+    if (match) return match;
+  }
+  return undefined;
 }

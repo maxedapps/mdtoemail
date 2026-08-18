@@ -2,9 +2,33 @@
 
 Convert Markdown into standalone, email-friendly HTML with inline styles and a conservative table layout. It generates HTML; it does not send email.
 
+## Runtime
+
+The **CLI** requires [Bun 1.3+](https://bun.sh/). The **library** is portable JavaScript: it uses no Node-only APIs and runs in Bun, Cloudflare Workers, and other standard JS runtimes.
+
+## Library
+
+`compileMarkdownEmail` takes a Markdown string and returns a complete HTML document plus structured diagnostics. It does not read files, write output, print to the console, or send email.
+
+```ts
+import { compileMarkdownEmail } from "mdtoemail";
+
+const { html, diagnostics, frontmatter } = await compileMarkdownEmail(
+  "# Hello\n\nThis is **bold**.",
+  { title: "Hello" },
+);
+```
+
+`html` is a full standalone document (doctype, table layout, inline styles). `diagnostics` is an immutable list of warnings and info. `frontmatter` is `{ kind, value }` or `null`. Pass an optional resolved `config` object; the library does not load TOML files.
+
 ## Quick start
 
-Requires [Bun 1.3+](https://bun.sh/).
+```bash
+bun add mdtoemail
+mdtoemail newsletter.md -o newsletter.html
+```
+
+From a clone:
 
 ```bash
 git clone https://github.com/maxedapps/mdtoemail.git

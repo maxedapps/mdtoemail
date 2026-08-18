@@ -5,7 +5,7 @@
 - Prefer Bun built-in APIs wherever practical, including file I/O, TOML parsing, tests, scripts, builds, and CLI/runtime features.
 - Prefer standard Node.js APIs where Bun built-ins are not a good fit.
 - Avoid external packages unless they provide clear, substantial value.
-- Sätteri is the chosen Markdown engine; keep other dependencies minimal.
+- Use the exact-pinned unified/remark/rehype pipeline; keep other dependencies minimal.
 - Build the project incrementally: first CLI/config basics, then Markdown conversion, then email-safe rendering, then diagnostics.
 - Do not add a server. This project only converts Markdown to email-compatible HTML.
 - Use TOML for user configuration.

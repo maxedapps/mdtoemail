@@ -1,0 +1,1381 @@
+<!doctype html>
+<!--
+  Interactive changes-report template. Self-contained: no external deps, works from disk.
+  Replace {{PLACEHOLDER}} content and duplicate the exemplar components as needed.
+  Section order and component semantics: see ../SKILL.md.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Worker-compatible library API — mdtoemail</title>
+    <style>
+      /* ===== design tokens — the only place colors live. Dark mode overrides below. ===== */
+      :root {
+        color-scheme: light;
+        --page: #f9f9f7; /* page background        */
+        --surface: #fcfcfb; /* cards, tables, dialogs */
+        --ink: #0b0b0b; /* primary text           */
+        --ink-2: #52514e; /* secondary text         */
+        --muted: #898781; /* labels, hints          */
+        --grid: #e1e0d9; /* hairlines              */
+        --border: rgba(11, 11, 11, 0.1);
+        --accent: #2a78d6; /* interactive elements ONLY */
+        --accent-soft: #cde2fb;
+        --seq-400: #3987e5; /* single-hue bar fill    */
+        --good: #0ca30c; /* status colors: severity only, never decoration */
+        --good-text: #006300;
+        --warning: #fab219;
+        --serious: #ec835a;
+        --code-bg: #f4f3f0;
+        --tk-kw: #9d4a9d; /* syntax tokens */
+        --tk-str: #1b7a4e;
+        --tk-type: #1c5cab;
+        --tk-num: #b05a00;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:where(:not([data-theme="light"])) {
+          color-scheme: dark;
+          --page: #0d0d0d;
+          --surface: #1a1a19;
+          --ink: #ffffff;
+          --ink-2: #c3c2b7;
+          --muted: #898781;
+          --grid: #2c2c2a;
+          --border: rgba(255, 255, 255, 0.1);
+          --accent: #3987e5;
+          --accent-soft: #10314f;
+          --good-text: #0ca30c;
+          --code-bg: #232322;
+          --tk-kw: #d38fd3;
+          --tk-str: #58c48d;
+          --tk-type: #86b6ef;
+          --tk-num: #e0a15c;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font:
+          15px/1.6 system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+      }
+      .eyebrow {
+        color: var(--muted);
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      h1 {
+        font-size: 30px;
+        line-height: 1.2;
+        margin: 6px 0 10px;
+      }
+      h2 {
+        font-size: 21px;
+        margin: 48px 0 4px;
+      }
+      h2 + p.lede {
+        margin-top: 4px;
+      }
+      h3 {
+        font-size: 16px;
+        margin: 26px 0 8px;
+      }
+      h4 {
+        font-size: 13.5px;
+        margin: 14px 0 4px;
+      }
+      p {
+        color: var(--ink-2);
+        max-width: 76ch;
+      }
+      p.lede {
+        font-size: 16px;
+      }
+      strong {
+        color: var(--ink);
+      }
+      a {
+        color: var(--accent);
+      }
+      [id] {
+        scroll-margin-top: 24px;
+      }
+      .hr {
+        border: 0;
+        border-top: 1px solid var(--grid);
+        margin: 40px 0 0;
+      }
+      .hint {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 10px;
+      }
+      .hint .dive {
+        font-size: inherit;
+      }
+
+      /* ===== clickable deep-dives: data-pop opens a dialog, data-goto scrolls + flashes ===== */
+      .dive {
+        background: none;
+        border: 0;
+        padding: 0 1px;
+        margin: 0;
+        font: inherit;
+        color: var(--accent);
+        cursor: pointer;
+        border-bottom: 1px dashed var(--accent);
+        border-radius: 2px 2px 0 0;
+      }
+      .dive:hover,
+      .dive:focus-visible {
+        background: var(--accent-soft);
+        outline: none;
+      }
+      @keyframes flashfade {
+        from {
+          box-shadow: 0 0 0 3px var(--accent);
+        }
+        to {
+          box-shadow: 0 0 0 3px transparent;
+        }
+      }
+      .flash {
+        animation: flashfade 1.6s ease-out;
+        border-radius: 10px;
+      }
+
+      /* ===== stat tiles (clickable buttons) ===== */
+      .tiles {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        margin: 24px 0 8px;
+      }
+      .tile {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        font: inherit;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .tile:hover,
+      .tile:focus-visible {
+        border-color: var(--accent);
+        outline: none;
+      }
+      .tile .v {
+        font-size: 26px;
+        font-weight: 650;
+        line-height: 1.15;
+        color: var(--ink);
+      }
+      .tile .l {
+        color: var(--muted);
+        font-size: 12.5px;
+        margin-top: 3px;
+      }
+      .tile .s {
+        display: block;
+        font-size: 12.5px;
+        margin-top: 3px;
+        color: var(--good-text);
+      }
+      .tile .go {
+        display: block;
+        font-size: 11.5px;
+        color: var(--accent);
+        margin-top: 6px;
+      }
+
+      /* ===== tables ===== */
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 14px 0;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+        font-size: 14px;
+      }
+      th {
+        text-align: left;
+        font-weight: 600;
+        color: var(--ink-2);
+        font-size: 12.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      th,
+      td {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--grid);
+        vertical-align: top;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      td {
+        color: var(--ink-2);
+      }
+      td:first-child {
+        color: var(--ink);
+        white-space: nowrap;
+      }
+      td code,
+      p code,
+      li code,
+      dd code {
+        background: var(--code-bg);
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 0.92em;
+      }
+
+      /* ===== code blocks: class="hl" gets syntax highlighting; plain <pre> stays as-is ===== */
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        overflow-x: auto;
+        font-size: 12.8px;
+        line-height: 1.55;
+      }
+      pre code {
+        background: none;
+        padding: 0;
+      }
+      .filetag {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+        color: var(--muted);
+        margin: 14px 0 -8px;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      code,
+      pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      .tk-cmt {
+        color: var(--muted);
+        font-style: italic;
+      }
+      .tk-kw {
+        color: var(--tk-kw);
+      }
+      .tk-str {
+        color: var(--tk-str);
+      }
+      .tk-type {
+        color: var(--tk-type);
+      }
+      .tk-num {
+        color: var(--tk-num);
+      }
+
+      /* ===== flow diagram: boxes + arrows; .hi = emphasized; .dot = load-bearing ◆ marker ===== */
+      .flow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: stretch;
+        gap: 8px;
+        margin: 18px 0;
+      }
+      .fbox {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 14px;
+        flex: 1 1 150px;
+        min-width: 150px;
+        position: relative;
+      }
+      .fbox .t {
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .fbox .d {
+        color: var(--muted);
+        font-size: 12.5px;
+        margin-top: 2px;
+      }
+      .fbox.hi {
+        border-color: var(--accent);
+        box-shadow: inset 3px 0 0 var(--accent);
+      }
+      .farrow {
+        align-self: center;
+        color: var(--muted);
+        font-size: 18px;
+        flex: 0 0 auto;
+      }
+      .dot {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        background: none;
+        border: 0;
+        padding: 2px;
+        color: var(--serious);
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .dot:hover {
+        transform: scale(1.3);
+      }
+
+      /* ===== numbered sequence (protocol / lifecycle steps) ===== */
+      ol.seq {
+        counter-reset: s;
+        list-style: none;
+        padding: 0;
+        margin: 16px 0;
+      }
+      ol.seq li {
+        counter-increment: s;
+        position: relative;
+        padding: 10px 14px 10px 46px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        margin-bottom: 8px;
+        color: var(--ink-2);
+      }
+      ol.seq li::before {
+        content: counter(s);
+        position: absolute;
+        left: 12px;
+        top: 10px;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 650;
+        font-size: 12.5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      ol.seq li b {
+        color: var(--ink);
+      }
+
+      /* ===== schema / entity cards ===== */
+      .schema {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+        margin: 18px 0;
+      }
+      .scard {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 13px;
+      }
+      .scard .tn {
+        font-family: ui-monospace, monospace;
+        font-weight: 650;
+        color: var(--ink);
+      }
+      .scard .cols {
+        color: var(--ink-2);
+        margin: 6px 0 4px;
+        line-height: 1.7;
+      }
+      .scard .k {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .cascade {
+        color: var(--muted);
+        font-size: 12.5px;
+        margin: -6px 0 0;
+      }
+
+      /* ===== findings (badged) and expandable load-bearing hotspot cards ===== */
+      .finding,
+      .hot {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin: 10px 0;
+      }
+      .hot {
+        border-left: 3px solid var(--serious);
+      }
+      details.hot > summary {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        flex-wrap: wrap;
+        cursor: pointer;
+        list-style: none;
+        margin: -14px -16px 0;
+        padding: 14px 16px;
+        border-radius: 10px;
+      }
+      details.hot > summary::-webkit-details-marker {
+        display: none;
+      }
+      details.hot > summary::before {
+        content: "▸";
+        color: var(--muted);
+        font-size: 12px;
+        flex: 0 0 auto;
+      }
+      details.hot[open] > summary::before {
+        content: "▾";
+      }
+      details.hot > summary:hover,
+      details.hot > summary:focus-visible {
+        background: var(--accent-soft);
+        outline: none;
+      }
+      details.hot[open] > summary {
+        border-bottom: 1px solid var(--grid);
+        border-radius: 10px 10px 0 0;
+        margin-bottom: 12px;
+      }
+      details.hot .why {
+        flex-basis: 100%;
+        color: var(--muted);
+        font-size: 12.5px;
+        font-weight: 400;
+      }
+      .hot-body {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+      }
+      .hot-body h4 {
+        margin: 12px 0 2px;
+      }
+      .hot-body h4:first-child {
+        margin-top: 0;
+      }
+      .hot-files {
+        list-style: none;
+        padding: 0;
+        margin: 6px 0;
+      }
+      .hot-files li {
+        margin: 4px 0;
+        color: var(--ink-2);
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      [data-path] {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      .finding .head {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 4px;
+        flex-wrap: wrap;
+      }
+      .finding .head b,
+      details.hot summary b {
+        font-size: 15px;
+      }
+      .badge {
+        font-size: 11.5px;
+        font-weight: 650;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 20px;
+        white-space: nowrap;
+      }
+      .b-serious {
+        color: #fff;
+        background: var(--serious);
+      } /* ⚠ gap — real problem       */
+      .b-warning {
+        color: #4a3400;
+        background: var(--warning);
+      } /* ⚠ deviation — from plan    */
+      .b-note {
+        color: var(--ink-2);
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+      }
+      .b-good {
+        color: #fff;
+        background: var(--good);
+      } /* ✓ clean — verified absence */
+      .b-hot {
+        color: #fff;
+        background: var(--serious);
+      } /* ◆ load-bearing marker      */
+      .finding p,
+      .hot-body p {
+        margin: 4px 0 0;
+        font-size: 14px;
+      }
+
+      /* ===== single-hue horizontal bars (e.g. test distribution); rows are clickable ===== */
+      .bars {
+        margin: 16px 0;
+        max-width: 560px;
+      }
+      .brow {
+        display: grid;
+        grid-template-columns: 110px 1fr 46px;
+        gap: 10px;
+        align-items: center;
+        margin: 7px 0;
+        font-size: 13.5px;
+        width: 100%;
+        background: none;
+        border: 0;
+        padding: 0;
+        font-family: inherit;
+        cursor: pointer;
+      }
+      .brow:hover .n {
+        color: var(--accent);
+      }
+      .brow .n {
+        color: var(--ink-2);
+        text-align: left;
+      }
+      .btrack {
+        height: 14px;
+        border-radius: 4px;
+        position: relative;
+      }
+      .bfill {
+        height: 100%;
+        border-radius: 4px;
+        background: var(--seq-400);
+      }
+      .brow .val {
+        color: var(--ink-2);
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+
+      /* ===== verification checklist: ✓ ran green, ○ (li.skip) explicitly not verified ===== */
+      .checklist {
+        list-style: none;
+        padding: 0;
+        margin: 12px 0;
+      }
+      .checklist li {
+        padding: 4px 0 4px 28px;
+        position: relative;
+        color: var(--ink-2);
+      }
+      .checklist li::before {
+        content: "✓";
+        position: absolute;
+        left: 4px;
+        color: var(--good-text);
+        font-weight: 700;
+      }
+      .checklist li.skip::before {
+        content: "○";
+        color: var(--muted);
+      }
+
+      .cols2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0 32px;
+      }
+      @media (max-width: 760px) {
+        main {
+          overflow-x: clip;
+        }
+        .cols2 {
+          grid-template-columns: 1fr;
+        }
+        details.hot > summary {
+          align-items: flex-start;
+        }
+        .filetag {
+          flex-direction: column;
+          gap: 2px;
+        }
+        table {
+          display: block;
+          max-width: 100%;
+          overflow-x: auto;
+        }
+        td:first-child {
+          white-space: normal;
+        }
+      }
+      @media print {
+        details.hot {
+          break-inside: avoid;
+        }
+        details.hot > .hot-body {
+          display: grid !important;
+        }
+      }
+      .tree {
+        font-size: 12.5px;
+      }
+      footer {
+        margin-top: 60px;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+
+      /* ===== popovers (native <dialog>) ===== */
+      dialog {
+        background: var(--surface);
+        color: var(--ink-2);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 0;
+        width: min(92vw, 640px);
+        max-height: 82vh;
+        font-size: 14px;
+      }
+      dialog::backdrop {
+        background: rgba(0, 0, 0, 0.45);
+      }
+      .pop-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--grid);
+        position: sticky;
+        top: 0;
+        background: var(--surface);
+      }
+      .pop-head b {
+        color: var(--ink);
+        font-size: 15.5px;
+      }
+      .pop-x {
+        background: none;
+        border: 0;
+        color: var(--muted);
+        font-size: 18px;
+        cursor: pointer;
+        line-height: 1;
+        padding: 4px 6px;
+        border-radius: 6px;
+      }
+      .pop-x:hover {
+        background: var(--code-bg);
+        color: var(--ink);
+      }
+      .pop-body {
+        padding: 6px 18px 18px;
+        overflow: auto;
+      }
+      .pop-body ul {
+        padding-left: 20px;
+        margin: 6px 0;
+      }
+      .pop-body li {
+        margin: 3px 0;
+      }
+      .pop-body table {
+        font-size: 13px;
+      }
+      .pop-body td:first-child {
+        white-space: normal;
+      }
+      .tcount {
+        color: var(--muted);
+        font-weight: 400;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <div class="eyebrow">mdtoemail · 0.2.0 library API · 2026-08-18</div>
+        <h1>Worker-compatible library API</h1>
+        <p class="lede">
+          <strong>mdtoemail is now a portable string-in compiler as well as a Bun CLI.</strong>
+          One unified/remark pipeline produces a complete email HTML document plus frozen diagnostics,
+          with no filesystem I/O on the library path, and the same packed
+          <button class="dive" data-pop="pop-candidate">0.2.0 tarball</button>
+          runs in Bun and in workerd without <code>nodejs_compat</code>.
+        </p>
+        <p class="hint">
+          Tip: dashed-underlined terms and every tile are clickable. A
+          <span style="color: var(--serious)">◆</span> marks load-bearing code (see
+          <button class="dive" data-goto="#hot-compiler">critical points</button>).
+        </p>
+      </header>
+
+      <div class="tiles">
+        <button class="tile" data-pop="pop-files">
+          <span class="v">26</span><span class="l"><br />changed files</span>
+          <span class="go">full inventory</span>
+        </button>
+        <button class="tile" data-pop="pop-files">
+          <span class="v">+2,051 / −398</span><span class="l"><br />line delta</span>
+          <span class="go">path · status · delta · role</span>
+        </button>
+        <button class="tile" data-goto="#verification">
+          <span class="v">124</span><span class="l"><br />bun test</span>
+          <span class="s">0 fail ✓</span>
+          <span class="go">jump to checks ↓</span>
+        </button>
+        <button class="tile" data-pop="pop-candidate">
+          <span class="v">294 KiB</span><span class="l"><br />Worker gzip<br />of 10 MiB limit</span>
+          <span class="go">packed-candidate evidence</span>
+        </button>
+        <button class="tile" data-goto="#findings">
+          <span class="v">Partial</span><span class="l"><br />plan status</span>
+          <span class="s">T9.2 publish pending</span>
+          <span class="go">findings ↓</span>
+        </button>
+        <button class="tile" data-pop="pop-reviews">
+          <span class="v">Clear</span><span class="l"><br />implementation reviews</span>
+          <span class="go">T1 · T4/T5 · final</span>
+        </button>
+      </div>
+
+      <h2 id="what-changed">What changed and why</h2>
+      <p>
+        <b>Before:</b> only a Bun TypeScript bin existed. Conversion imported Sätteri, used
+        <code>Bun.escapeHTML</code> and <code>Buffer.byteLength</code>, and mixed CLI I/O with rendering.
+        There was no supported library export, and Sätteri’s WASI/Worker path is incompatible with Cloudflare Workers.
+      </p>
+      <p>
+        <b>After:</b> <code>compileMarkdownEmail</code> is the public root API. Config loading stays in a Bun adapter.
+        Markdown runs through one exact-pinned unified pipeline and a project-owned sanitizer/highlighter.
+        Package <code>0.2.0</code> ships <code>dist/</code> ESM, declarations, and a built CLI.
+      </p>
+      <p class="lede">
+        Unchanged: TOML schema, theme tokens, GFM/frontmatter/diagnostics/highlight contracts, no sending server.
+        Not done: human npm publish of exact <code>0.2.0</code>.
+      </p>
+
+      <h2 id="big-picture">The big picture</h2>
+      <p class="lede">
+        Callers pass a Markdown string. The compiler validates config, renders, wraps a table document, and returns diagnostics. The CLI is now a thin I/O adapter over that function.
+      </p>
+      <div class="flow">
+        <div class="fbox">
+          <div class="t">Markdown string</div>
+          <div class="d">plus optional title and resolved Config</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fbox hi">
+          <button class="dot" data-goto="#hot-compiler" title="public compiler contract">◆</button>
+          <div class="t">compileMarkdownEmail</div>
+          <div class="d">clone/validate · no I/O · freeze diagnostics</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fbox hi">
+          <button class="dot" data-goto="#hot-engine" title="one portable engine">◆</button>
+          <div class="t">unified + sanitizer</div>
+          <div class="d">GFM · frontmatter · raw HTML as text</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fbox hi">
+          <button class="dot" data-goto="#hot-highlight" title="opt-in highlight">◆</button>
+          <div class="t">opt-in highlight</div>
+          <div class="d">after sanitize · Shiki JS engine</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fbox">
+          <div class="t">Complete HTML</div>
+          <div class="d">document + diagnostics + frontmatter</div>
+        </div>
+      </div>
+      <div class="flow">
+        <div class="fbox">
+          <div class="t">Bun CLI</div>
+          <div class="d">files, TOML, print, strict, write</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fbox hi">
+          <button class="dot" data-goto="#hot-cli" title="single assembly path">◆</button>
+          <div class="t">same compiler</div>
+          <div class="d">basename title · returned HTML</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fbox hi">
+          <button class="dot" data-goto="#hot-worker" title="packed workerd proof">◆</button>
+          <div class="t">packed 0.2.0</div>
+          <div class="d">Bun fixture + wrangler/workerd</div>
+        </div>
+      </div>
+
+      <h2 id="hotspots">
+        Critical points — load-bearing code <span style="color: var(--serious)">◆</span>
+      </h2>
+      <p class="lede">
+        Not bugs — places where a defect would break the library contract, email safety, or Worker portability.
+      </p>
+
+      <details class="hot" id="hot-compiler">
+        <summary>
+          <span class="badge b-hot">◆ public contract</span>
+          <b>Library boundary clones, validates, and never does I/O</b>
+          <span class="why">A leaky config object or cwd TOML load would make Worker/Emailed consumers unsafe or nondeterministic.</span>
+        </summary>
+        <div class="hot-body">
+          <h4>Failure if wrong</h4>
+          <p>Caller config mutation would change later compiles; unsafe CSS tokens could reach inline styles; a surprising <code>mdtoemail.toml</code> would alter Worker output; diagnostics would be caller-mutable.</p>
+          <h4>Protected by</h4>
+          <p>
+            <code>validateResolvedConfig</code> rebuilds known fields and re-checks theme tokens.
+            <button class="dive" data-goto="#f-publish">T9.2 publish</button> is still human-owned and does not affect this in-repo contract.
+          </p>
+          <h4>Files involved</h4>
+          <ul class="hot-files">
+            <li><code data-path="src/compiler.ts">src/compiler.ts</code> — new; public orchestrator</li>
+            <li><code data-path="src/index.ts">src/index.ts</code> — new; root exports only</li>
+            <li><code data-path="src/config.ts">src/config.ts</code> — portable clone/validate</li>
+            <li><code data-path="src/config-loader.ts">src/config-loader.ts</code> — Bun TOML only; not imported by compiler</li>
+            <li><code data-path="test/library.test.ts">test/library.test.ts</code> — complete HTML, titles, freeze, clone, reject, 85 KiB, no I/O</li>
+            <li><code data-path="test/config.test.ts">test/config.test.ts</code> — validator + TOML/theme cases</li>
+          </ul>
+          <h4>Key code</h4>
+          <span class="filetag"><code data-path="src/compiler.ts">src/compiler.ts</code> · L22–L35 · compileMarkdownEmail</span>
+          <pre class="hl" data-code-key="hot-compiler-api"><code>export async function compileMarkdownEmail(
+  markdown: string,
+  options: CompileMarkdownEmailOptions = {},
+): Promise&lt;CompiledMarkdownEmail&gt; {
+  const config = options.config === undefined ? cloneConfig(defaultConfig) : validateResolvedConfig(options.config);
+  const rendered = await renderMarkdown(markdown, config);
+  const html = renderEmailDocument(rendered.html, options.title ?? "", config);
+  addFinalHtmlSizeDiagnostic(html, rendered.diagnostics);
+  return {
+    html,
+    frontmatter: toFrontmatter(rendered.frontmatter),
+    diagnostics: freezeDiagnostics(rendered.diagnostics),
+  };
+}</code></pre>
+        </div>
+      </details>
+
+      <details class="hot" id="hot-engine">
+        <summary>
+          <span class="badge b-hot">◆ email safety</span>
+          <b>Raw HTML becomes text; unsafe URLs never stay as href/src</b>
+          <span class="why">The sanitizer is the only thing between Markdown and email-client HTML.</span>
+        </summary>
+        <div class="hot-body">
+          <h4>Failure if wrong</h4>
+          <p>Raw <code>&lt;script&gt;</code> or <code>javascript:</code> links would ship in mail. Dual engines would drift on source-line diagnostics.</p>
+          <h4>Protected by</h4>
+          <p>Existing markdown/email/html-validity fixtures plus a reviewed serializer note: rehype leaves <code>&gt;</code> literal in text after encoding <code>&lt;</code> and <code>&amp;</code>.</p>
+          <h4>Files involved</h4>
+          <ul class="hot-files">
+            <li><code data-path="src/markdown.ts">src/markdown.ts</code> — unified processor; allowDangerousHtml then sanitize</li>
+            <li><code data-path="src/email.ts">src/email.ts</code> — project-owned HAST walk</li>
+            <li><code data-path="src/diagnostics.ts">src/diagnostics.ts</code> — TextEncoder 85 KiB warning</li>
+            <li><code data-path="test/markdown.test.ts">test/markdown.test.ts</code> — GFM, YAML/TOML, raw HTML, URLs, lines</li>
+            <li><code data-path="test/email.test.ts">test/email.test.ts</code> — URL policy + wrapper escape</li>
+            <li><code data-path="package.json">package.json</code> — exact unified/remark/rehype pins; no satteri</li>
+          </ul>
+          <h4>Key code</h4>
+          <span class="filetag"><code data-path="src/email.ts">src/email.ts</code> · L156–L164 · raw → text</span>
+          <pre class="hl" data-code-key="hot-engine-raw"><code>if (isRaw(node)) {
+  reportOnce(diagnostics, lineOf(node), {
+    code: "raw-html-escaped",
+    severity: "warning",
+    message: "Escaped raw HTML because arbitrary HTML is not supported in email-safe output.",
+  });
+  parent.children[index] = { type: "text", value: node.value };
+  return "replaced";
+}</code></pre>
+        </div>
+      </details>
+
+      <details class="hot" id="hot-highlight">
+        <summary>
+          <span class="badge b-hot">◆ opt-in highlight</span>
+          <b>Highlighting runs after sanitization and not when disabled</b>
+          <span class="why">A pre-sanitize highlighter or eager Shiki init would inject markup or inflate Worker startup.</span>
+        </summary>
+        <div class="hot-body">
+          <h4>Failure if wrong</h4>
+          <p>Token markup could appear for disabled configs; malicious fence text could become structure; workerd could fail to start.</p>
+          <h4>Protected by</h4>
+          <p>highlight + html-validity suites; Worker highlight request in the packed candidate. No <code>mdtoemail/highlight</code> split — gzip 294.32 KiB stayed under 10 MiB.</p>
+          <h4>Files involved</h4>
+          <ul class="hot-files">
+            <li><code data-path="src/highlight.ts">src/highlight.ts</code> — highlightCodeHast early return</li>
+            <li><code data-path="src/markdown.ts">src/markdown.ts</code> — highlight after sanitize</li>
+            <li><code data-path="test/highlight.test.ts">test/highlight.test.ts</code> — limits, fallbacks, dark, noncanonical</li>
+            <li><code data-path="test/html-validity.test.ts">test/html-validity.test.ts</code> — parse5 + injection fixture (unchanged contract)</li>
+            <li><code data-path="test/worker/worker.ts">test/worker/worker.ts</code> — default vs highlight routes</li>
+          </ul>
+          <h4>Key code</h4>
+          <p>No extra excerpt — the pipeline order is the same <code>src/markdown.ts</code> processor already listed under the engine point (sanitize, then highlight). Highlight-off is <code>if (!config.markdown.syntaxHighlighting) return;</code> at <code>src/highlight.ts</code> L273.</p>
+        </div>
+      </details>
+
+      <details class="hot" id="hot-cli">
+        <summary>
+          <span class="badge b-hot">◆ single path</span>
+          <b>CLI writes the compiler’s complete HTML after strict checks</b>
+          <span class="why">A leftover assembly path would let CLI and library drift.</span>
+        </summary>
+        <div class="hot-body">
+          <h4>Failure if wrong</h4>
+          <p>CLI could wrap twice, skip the 85 KiB warning, or write before strict failure.</p>
+          <h4>Protected by</h4>
+          <p>Existing CLI cases plus an exact HTML parity test against <code>compileMarkdownEmail</code> for the same source, resolved config, and basename title.</p>
+          <h4>Files involved</h4>
+          <ul class="hot-files">
+            <li><code data-path="src/cli.ts">src/cli.ts</code> — I/O + policy only</li>
+            <li><code data-path="src/compiler.ts">src/compiler.ts</code> — shared compiler</li>
+            <li><code data-path="test/cli.test.ts">test/cli.test.ts</code> — behavior + parity</li>
+          </ul>
+          <h4>Key code</h4>
+          <span class="filetag"><code data-path="src/cli.ts">src/cli.ts</code> · L73–L79 · compile then strict</span>
+          <pre class="hl" data-code-key="hot-cli-call"><code>const compiled = await compileMarkdownEmail(markdown, { title: basename(input), config });
+printDiagnostics(compiled.diagnostics, config);
+
+const warningCount = countWarnings(compiled.diagnostics);
+if (config.email.strict &amp;&amp; warningCount &gt; 0) {
+  throw new Error(`Strict mode failed with ${warningCount} warning(s).`);
+}</code></pre>
+        </div>
+      </details>
+
+      <details class="hot" id="hot-worker">
+        <summary>
+          <span class="badge b-hot">◆ packed workerd</span>
+          <b>The published tarball is what workerd actually runs</b>
+          <span class="why">A source-only smoke test would not prove package exports, types, or the Worker graph.</span>
+        </summary>
+        <div class="hot-body">
+          <h4>Failure if wrong</h4>
+          <p>Consumers would install a bin-only package, hit Node APIs in Workers, or exceed the gzip size limit. Leftover wrangler processes would leak.</p>
+          <h4>Protected by</h4>
+          <p>
+            One <button class="dive" data-pop="pop-candidate">test:candidate</button> run: pack once, inspect, Bun import + <code>tsc</code> + <code>--version</code>, wrangler dry-run, two workerd requests, always-clean temp dirs.
+          </p>
+          <h4>Files involved</h4>
+          <ul class="hot-files">
+            <li><code data-path="test/package-candidate.ts">test/package-candidate.ts</code> — orchestrator</li>
+            <li><code data-path="test/worker/worker.ts">test/worker/worker.ts</code> — modules Worker</li>
+            <li><code data-path="test/worker/wrangler.jsonc">test/worker/wrangler.jsonc</code> — compat 2026-08-03, no flags</li>
+            <li><code data-path="package.json">package.json</code> — exports/bin 0.2.0; wrangler 4.123.0</li>
+            <li><code data-path="tsconfig.build.json">tsconfig.build.json</code> — ESM + declarations</li>
+          </ul>
+          <h4>Key code</h4>
+          <span class="filetag"><code data-path="test/worker/wrangler.jsonc">test/worker/wrangler.jsonc</code> · entire file</span>
+          <pre class="hl" data-code-key="hot-worker-compat"><code>{
+  "name": "mdtoemail-candidate",
+  "main": "worker.ts",
+  "compatibility_date": "2026-08-03"
+}</code></pre>
+        </div>
+      </details>
+
+      <h2 id="areas">What was built, area by area</h2>
+      <table>
+        <tr>
+          <th>Area</th>
+          <th>Change</th>
+          <th>Reason</th>
+          <th>Key files</th>
+        </tr>
+        <tr>
+          <td>Public API</td>
+          <td>Root <code>compileMarkdownEmail</code> returns complete HTML, frozen diagnostics, frontmatter.</td>
+          <td>Emailed and Workers need a supported library, not a sibling path.</td>
+          <td><code data-path="src/index.ts">src/index.ts</code>, <code data-path="src/compiler.ts">src/compiler.ts</code></td>
+        </tr>
+        <tr>
+          <td>Config</td>
+          <td>Portable validate/clone vs Bun TOML loader.</td>
+          <td>Library must not read files.</td>
+          <td><code data-path="src/config.ts">src/config.ts</code>, <code data-path="src/config-loader.ts">src/config-loader.ts</code></td>
+        </tr>
+        <tr>
+          <td>Engine</td>
+          <td>Sätteri removed; exact unified/remark/rehype pins; project HAST sanitizer.</td>
+          <td>Workers cannot use Sätteri threads/Web Workers.</td>
+          <td><code data-path="src/markdown.ts">src/markdown.ts</code>, <code data-path="src/email.ts">src/email.ts</code></td>
+        </tr>
+        <tr>
+          <td>Highlight</td>
+          <td>Async HAST transform after sanitize; still on the root API.</td>
+          <td>Plan forbids a pre-split unless workerd failed.</td>
+          <td><code data-path="src/highlight.ts">src/highlight.ts</code></td>
+        </tr>
+        <tr>
+          <td>CLI</td>
+          <td>Calls the compiler; keeps print/strict/write.</td>
+          <td>One implementation for every consumer.</td>
+          <td><code data-path="src/cli.ts">src/cli.ts</code></td>
+        </tr>
+        <tr>
+          <td>Package</td>
+          <td>0.2.0 ships <code>dist/</code>; README documents library + Worker runtime.</td>
+          <td>Consumers must import built JS and types.</td>
+          <td><code data-path="package.json">package.json</code>, <code data-path="README.md">README.md</code></td>
+        </tr>
+      </table>
+
+      <h2 id="protocol">Compile and pack flow</h2>
+      <ol class="seq">
+        <li><b>Validate</b> — omitted config is cloned; supplied config is runtime-validated.</li>
+        <li><b>Parse</b> — remark-parse, optional GFM and YAML/TOML frontmatter.</li>
+        <li><b>Sanitize</b> — raw nodes become text; allowlist, URL policy, styles.</li>
+        <li><b>Highlight</b> — skipped entirely when disabled; otherwise after sanitize.</li>
+        <li><b>Wrap</b> — table document + UTF-8 size diagnostic; return frozen diagnostics.</li>
+        <li><b>CLI / Worker</b> — CLI prints and may fail strict before write; Worker returns JSON of the same result.</li>
+      </ol>
+      <span class="filetag">packed-candidate stdout (parent rerun)</span>
+      <pre><code>tarball contains 60 entries
+bun compile ok
+installed mdtoemail --version 0.2.0
+Total Upload: 1833.99 KiB / gzip: 294.32 KiB
+worker default compile ok
+worker highlighted compile ok
+candidate ok</code></pre>
+
+      <h2 id="datamodel">Result shape</h2>
+      <div class="schema">
+        <div class="scard">
+          <div class="tn">CompiledMarkdownEmail</div>
+          <div class="cols">html · diagnostics · frontmatter</div>
+          <div class="k">diagnostics frozen; frontmatter { kind, value } or null</div>
+        </div>
+        <div class="scard">
+          <div class="tn">Config</div>
+          <div class="cols">markdown · email · theme</div>
+          <div class="k">library revalidates camelCase tokens; CLI loads TOML snake_case</div>
+        </div>
+        <div class="scard">
+          <div class="tn">Diagnostic</div>
+          <div class="cols">code · severity · message · line?</div>
+          <div class="k">always returned; CLI owns print/strict</div>
+        </div>
+      </div>
+      <p class="cascade">Markdown string ⟶ compiler ⟶ complete HTML document. Frontmatter is returned, never used as title or body.</p>
+
+      <h2 id="fixture">Packed-candidate fixture</h2>
+      <pre class="tree">test/
+├── package-candidate.ts
+└── worker/
+    ├── worker.ts
+    └── wrangler.jsonc</pre>
+
+      <h2 id="verification">Verification status</h2>
+      <ul class="checklist">
+        <li><code>bun test</code> (after DEX-001) — 124 pass, 0 fail, 1328 expects, 8 files</li>
+        <li><code>bun run typecheck</code> — clean (<code>bunx tsc --noEmit</code>)</li>
+        <li><code>bun test &amp;&amp; bun run typecheck &amp;&amp; bun run build &amp;&amp; bun run test:candidate</code> (T9.1, after DEX-001) — 124 pass then typecheck, build, candidate ok; gzip 294.32 KiB</li>
+        <li><code>bun run test:candidate</code> — pack 60 entries, Bun <code>0.2.0</code>, both workerd responses, no leftover <code>/tmp/mdtoemail-candidate-*</code></li>
+        <li>Portable <code>dist/{index,compiler,markdown,email,diagnostics}.js</code> grep for Bun/Buffer/node:/satteri_napi — no matches</li>
+        <li class="skip"><strong>npm publish / npm view mdtoemail@0.2.0</strong> — human credentialed; not run. Checkout is dirty.</li>
+      </ul>
+      <div class="bars" role="img" aria-label="Verification split">
+        <button class="brow" data-goto="#verification">
+          <span class="n">bun test</span>
+          <span class="btrack"><span class="bfill" style="width: 100%; display: block"></span></span>
+          <span class="val">124</span>
+        </button>
+        <button class="brow" data-pop="pop-candidate">
+          <span class="n">Worker gzip vs 10 MiB</span>
+          <span class="btrack"><span class="bfill" style="width: 3%; display: block"></span></span>
+          <span class="val">294 KiB</span>
+        </button>
+      </div>
+
+      <h2 id="findings">Critical findings</h2>
+      <div class="finding" id="f-publish">
+        <div class="head">
+          <span class="badge b-serious">⚠ gap</span>
+          <b>mdtoemail@0.2.0 is not published</b>
+        </div>
+        <p>
+          T9.2 requires the owner’s npm login, a clean checkout, a git tag, and
+          <code>npm view mdtoemail@0.2.0 version dist.integrity --json</code>.
+          Emailed cannot consume the exact registry version until that happens.
+        </p>
+      </div>
+      <div class="finding" id="f-gt">
+        <div class="head">
+          <span class="badge b-note">note</span>
+          <b>rehype-stringify leaves “&gt;” unencoded in text</b>
+        </div>
+        <p>
+          Text such as <code>&amp;lt;em&amp;gt;x&amp;lt;/em&amp;gt;</code> is now serialized as
+          <code>&amp;lt;em&gt;x&amp;lt;/em&gt;</code> (literal greater-than). Three markdown assertions were narrowed. Safety is unchanged.
+        </p>
+      </div>
+      <div class="finding" id="f-prefix">
+        <div class="head">
+          <span class="badge b-note">note</span>
+          <b>CLI no longer prefixes compile errors with “Could not render Markdown.”</b>
+        </div>
+        <p>The wrapper died with the duplicate assembly path. No test asserted that prefix. Raw compile errors still fail the process.</p>
+      </div>
+      <div class="finding" id="f-clean">
+        <div class="head">
+          <span class="badge b-good">✓ clean</span>
+          <b>Unsafe-URL and raw-HTML paths were hunted and stayed closed</b>
+        </div>
+        <p>
+          javascript:/data:/relative image cases, task-list inputs, footnote sections, and the
+          <code>&lt;/td&gt;&lt;script&gt;</code> highlight fixture still fail closed. Independent T1, T4/T5, and final reviews admitted no findings.
+        </p>
+      </div>
+
+      <h2 id="decisions">Notable decisions along the way</h2>
+      <table>
+        <tr>
+          <th>Decision</th>
+          <th>Why</th>
+        </tr>
+        <tr>
+          <td>One engine for CLI and library</td>
+          <td>A Bun-only Sätteri fallback would drift on output, lines, and security.</td>
+        </tr>
+        <tr>
+          <td>Keep highlighting on the root export</td>
+          <td>Worker gzip 294 KiB; plan said split only if workerd failed.</td>
+        </tr>
+        <tr>
+          <td>compatibility_date 2026-08-03</td>
+          <td>2026-08-04 enables nodejs_compat by default; the fixture must not rely on it.</td>
+        </tr>
+        <tr>
+          <td>DEX-001: delete markdownFeatures</td>
+          <td>Dead Sätteri mapper after T4; GFM/frontmatter already asserted via output tests.</td>
+        </tr>
+        <tr>
+          <td>Do not publish from this session</td>
+          <td>Plan: human credentials; dirty checkout.</td>
+        </tr>
+      </table>
+
+      <h2 id="review-guide">Review guide</h2>
+      <p>
+        <b>Focus first:</b>
+        <button class="dive" data-goto="#hot-compiler">compiler I/O boundary</button>,
+        <button class="dive" data-goto="#hot-engine">sanitizer</button>, and
+        <button class="dive" data-goto="#hot-worker">packed tarball → workerd</button>.
+      </p>
+      <p>
+        <b>Remaining risks:</b> unpublished 0.2.0; declaration maps point at unpublished <code>src/</code>;
+        extensionless ESM imports assume a bundler (Bun/Wrangler). Residual: Shiki stays on the default graph, so a future Worker limit change could still force the optional highlight export.
+      </p>
+      <p>
+        <b>Follow-up:</b> owner publishes exact 0.2.0 from a clean tagged commit and gives Emailed the version plus integrity. Do not fall back to a git branch dependency.
+      </p>
+
+      <hr class="hr" />
+      <footer>
+        Generated 2026-08-18 · inspected repo: mdtoemail · exact scope: uncommitted working tree vs HEAD
+        (15 modified, 8 new implementation files, 3 workflow files) · sources:
+        .plans/worker-compatible-library-api.md,
+        .plans/worker-compatible-library-api.progress.md,
+        T1/T4/final reviews,
+        .reviews/worker-compatible-library-api-decomplex.md,
+        and parent-run bun test / typecheck / build / test:candidate.
+      </footer>
+    </main>
+
+    <dialog id="pop-files">
+      <div class="pop-head">
+        <b>File inventory</b><button class="pop-x" data-close>✕</button>
+      </div>
+      <div class="pop-body">
+        <table>
+          <tr><th>Path</th><th>Status</th><th>Delta</th><th>Role</th></tr>
+          <tr><td><code data-path="src/index.ts">src/index.ts</code></td><td>new</td><td>+5</td><td>root library exports</td></tr>
+          <tr><td><code data-path="src/compiler.ts">src/compiler.ts</code></td><td>new</td><td>+48</td><td>public compiler</td></tr>
+          <tr><td><code data-path="src/config-loader.ts">src/config-loader.ts</code></td><td>new</td><td>+110</td><td>Bun TOML/theme I/O</td></tr>
+          <tr><td><code data-path="src/config.ts">src/config.ts</code></td><td>changed</td><td>+77 / −113</td><td>portable Config + validator</td></tr>
+          <tr><td><code data-path="src/markdown.ts">src/markdown.ts</code></td><td>changed</td><td>+70 / −14</td><td>unified pipeline</td></tr>
+          <tr><td><code data-path="src/email.ts">src/email.ts</code></td><td>changed</td><td>+169 / −69</td><td>HAST sanitizer + wrapper</td></tr>
+          <tr><td><code data-path="src/highlight.ts">src/highlight.ts</code></td><td>changed</td><td>+131 / −115</td><td>async HAST highlight</td></tr>
+          <tr><td><code data-path="src/diagnostics.ts">src/diagnostics.ts</code></td><td>changed</td><td>+1 / −1</td><td>TextEncoder size</td></tr>
+          <tr><td><code data-path="src/cli.ts">src/cli.ts</code></td><td>changed</td><td>+9 / −19</td><td>CLI adapter</td></tr>
+          <tr><td><code data-path="package.json">package.json</code></td><td>changed</td><td>+21 / −6</td><td>0.2.0 exports/bin/deps</td></tr>
+          <tr><td><code data-path="bun.lock">bun.lock</code></td><td>changed</td><td>+287 / −19</td><td>lockfile; no satteri</td></tr>
+          <tr><td><code data-path="tsconfig.json">tsconfig.json</code></td><td>changed</td><td>+2 / −1</td><td>exclude worker templates</td></tr>
+          <tr><td><code data-path="tsconfig.build.json">tsconfig.build.json</code></td><td>new</td><td>+15</td><td>emit ESM + d.ts</td></tr>
+          <tr><td><code data-path="README.md">README.md</code></td><td>changed</td><td>+25 / −1</td><td>library + runtime docs</td></tr>
+          <tr><td><code data-path="AGENTS.md">AGENTS.md</code></td><td>changed</td><td>+1 / −1</td><td>engine rule</td></tr>
+          <tr><td><code data-path="test/library.test.ts">test/library.test.ts</code></td><td>new</td><td>+175</td><td>library contract</td></tr>
+          <tr><td><code data-path="test/config.test.ts">test/config.test.ts</code></td><td>changed</td><td>+70 / −1</td><td>validator + loader</td></tr>
+          <tr><td><code data-path="test/markdown.test.ts">test/markdown.test.ts</code></td><td>changed</td><td>+13 / −11</td><td>engine + TOML; mapper test removed</td></tr>
+          <tr><td><code data-path="test/highlight.test.ts">test/highlight.test.ts</code></td><td>changed</td><td>+26 / −26</td><td>no Sätteri plugins</td></tr>
+          <tr><td><code data-path="test/cli.test.ts">test/cli.test.ts</code></td><td>changed</td><td>+16 / −1</td><td>CLI/library parity</td></tr>
+          <tr><td><code data-path="test/package-candidate.ts">test/package-candidate.ts</code></td><td>new</td><td>+429</td><td>pack + Bun + workerd</td></tr>
+          <tr><td><code data-path="test/worker/worker.ts">test/worker/worker.ts</code></td><td>new</td><td>+31</td><td>modules Worker</td></tr>
+          <tr><td><code data-path="test/worker/wrangler.jsonc">test/worker/wrangler.jsonc</code></td><td>new</td><td>+5</td><td>compat date, no flags</td></tr>
+          <tr><td><code data-path=".plans/worker-compatible-library-api.md">.plans/worker-compatible-library-api.md</code></td><td>new</td><td>+168</td><td>implementation plan</td></tr>
+          <tr><td><code data-path=".plans/worker-compatible-library-api.progress.md">.plans/worker-compatible-library-api.progress.md</code></td><td>new</td><td>+77</td><td>progress tracker</td></tr>
+          <tr><td><code data-path=".reviews/worker-compatible-library-api-decomplex.md">.reviews/worker-compatible-library-api-decomplex.md</code></td><td>new</td><td>+70</td><td>decomplex audit</td></tr>
+        </table>
+      </div>
+    </dialog>
+
+    <dialog id="pop-candidate">
+      <div class="pop-head">
+        <b>Packed candidate 0.2.0</b><button class="pop-x" data-close>✕</button>
+      </div>
+      <div class="pop-body">
+        <p>One tarball, two clean temp installs. wrangler 4.123.0. compatibility_date 2026-08-03. No nodejs_compat.</p>
+        <h4>Tarball <span class="tcount">— 60 entries</span></h4>
+        <ul>
+          <li>Required: package/dist, README.md, LICENSE, examples/, mdtoemail.example.toml</li>
+          <li>Library artifacts: dist/index.js, dist/index.d.ts, dist/cli.js</li>
+          <li>Rejected if present: package/src, satteri</li>
+        </ul>
+        <h4>Bun fixture</h4>
+        <ul>
+          <li>Root import compiles GFM table + unsafe-link diagnostic + complete HTML</li>
+          <li>tsc --strict nodenext resolves public types</li>
+          <li>installed mdtoemail --version = 0.2.0</li>
+        </ul>
+        <h4>Worker</h4>
+        <ul>
+          <li>dry-run Total Upload 1833.99 KiB / gzip 294.32 KiB (301383.68 bytes gzip)</li>
+          <li>GET / default compile: heading, table, no javascript:, unsafe-link-url</li>
+          <li>GET /?highlight=1: highlight table bgcolor #f6f8fa, no leftover pre</li>
+        </ul>
+      </div>
+    </dialog>
+
+    <dialog id="pop-reviews">
+      <div class="pop-head">
+        <b>Independent reviews</b><button class="pop-x" data-close>✕</button>
+      </div>
+      <div class="pop-body">
+        <ul>
+          <li>T1 public contract — Clear, no admitted findings</li>
+          <li>T4/T5 engine — Clear, no admitted findings</li>
+          <li>Final T1–T8 implementation — Clear; T9.2 deferred human publish</li>
+          <li>Decomplex audit — DEX-001 Act (dead markdownFeatures); parent deleted it; 124 tests pass</li>
+        </ul>
+      </div>
+    </dialog>
+
+
+    <script>
+      (() => {
+        "use strict";
+
+        // --- syntax highlighting (pre.hl only). Order: comment | string | keyword | number | Type ---
+        const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const TOKEN = new RegExp(
+          [
+            String.raw`(\/\/[^\n]*)`, // 1 comment
+            String.raw`("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|` +
+              "`" +
+              String.raw`(?:[^\`\\]|\\.)*` +
+              "`" +
+              `)`, // 2 string (backticks span lines)
+            String.raw`\b(const|let|var|function|return|if|else|for|of|in|new|class|extends|export|default|import|from|yield|await|async|typeof|undefined|null|true|false|this|INSERT|INTO|VALUES|UPDATE|SET|WHERE|DELETE|FROM|SELECT)\b`, // 3 keyword (incl. SQL verbs)
+            String.raw`\b(\d+(?:\.\d+)?)\b`, // 4 number
+            String.raw`\b([A-Z][A-Za-z0-9_]*)\b`, // 5 type-ish
+          ].join("|"),
+          "g",
+        );
+        const CLASSES = [null, "tk-cmt", "tk-str", "tk-kw", "tk-num", "tk-type"];
+        for (const code of document.querySelectorAll("pre.hl code")) {
+          const text = code.textContent;
+          let out = "";
+          let last = 0;
+          for (const m of text.matchAll(TOKEN)) {
+            out += esc(text.slice(last, m.index));
+            const group = CLASSES.findIndex((_, i) => i > 0 && m[i] !== undefined);
+            out += '<span class="' + CLASSES[group] + '">' + esc(m[0]) + "</span>";
+            last = m.index + m[0].length;
+          }
+          out += esc(text.slice(last));
+          code.innerHTML = out;
+        }
+
+        // --- popovers and jump links (event delegation; works for any data-pop / data-goto) ---
+        document.addEventListener("click", (event) => {
+          const closer = event.target.closest("[data-close]");
+          if (closer) {
+            closer.closest("dialog")?.close();
+            return;
+          }
+          const trigger = event.target.closest("[data-pop],[data-goto]");
+          if (!trigger) return;
+          if (trigger.dataset.pop) {
+            document.getElementById(trigger.dataset.pop)?.showModal();
+            return;
+          }
+          const target = document.querySelector(trigger.dataset.goto);
+          if (!target) return;
+          trigger.closest("dialog")?.close();
+          target.closest("details")?.setAttribute("open", "");
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+          target.classList.remove("flash");
+          void target.offsetWidth;
+          target.classList.add("flash");
+        });
+
+        // click on the backdrop closes (Esc works natively)
+        for (const dialog of document.querySelectorAll("dialog")) {
+          dialog.addEventListener("click", (event) => {
+            if (event.target === dialog) dialog.close();
+          });
+        }
+
+        // deep link: ?pop=example opens #pop-example (also proves JS ran when screenshotting)
+        const requested = new URLSearchParams(location.search).get("pop");
+        if (requested) document.getElementById("pop-" + requested)?.showModal();
+
+        // hash / refresh: open the target <details> or its closest ancestor, then scroll
+        const openHash = () => {
+          if (!location.hash) return;
+          let target;
+          try {
+            target = document.querySelector(location.hash);
+          } catch {
+            return;
+          }
+          if (!target) return;
+          target.closest("details")?.setAttribute("open", "");
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+        };
+        openHash();
+        window.addEventListener("hashchange", openHash);
+
+        window.addEventListener("beforeprint", () => {
+          for (const node of document.querySelectorAll("details.hot")) node.setAttribute("open", "");
+        });
+      })();
+    </script>
+  </body>
+</html>

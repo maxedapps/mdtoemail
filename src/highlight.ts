@@ -1,6 +1,5 @@
 import { createHighlighterCore } from "@shikijs/core";
-import { defineHastPlugin, type HastPluginInput } from "satteri";
-import type { Element, ElementContent } from "hast";
+import type { Element, ElementContent, Root } from "hast";
 import type { Config, SyntaxHighlightingMode } from "./config";
 import { addDiagnostic, type Diagnostic } from "./diagnostics";
 import { createJavaScriptRegexEngine } from "@shikijs/engine-javascript";
@@ -265,122 +264,139 @@ export function toEmailDisplayTokens(
   return output;
 }
 
-export function codeHighlightPlugin(
+export async function highlightCodeHast(
+  tree: Root,
   config: Config,
   diagnostics: Diagnostic[],
   tokenizer: CodeTokenizer = defaultCodeTokenizer,
-): HastPluginInput {
-  return defineHastPlugin({
-    name: "email-code-highlighter",
-    element: {
-      filter: ["pre"],
-      async visit(pre, ctx) {
-        if (!config.markdown.syntaxHighlighting) return;
+): Promise<void> {
+  if (!config.markdown.syntaxHighlighting) return;
+  await visitPreBlocks(tree, config, diagnostics, tokenizer);
+}
 
-        const claimedLanguage = claimedCodeLanguage(pre);
-        const canonical = canonicalCodeBlock(pre);
-        if (!canonical) {
-          if (claimedLanguage) {
-            reportCodeDiagnostic(diagnostics, pre, {
-              code: "code-highlighting-failed",
-              severity: "warning",
-              message: `Could not highlight ${claimedLanguage} code because the code block structure was not canonical; preserved the plain code block.`,
-            });
-          }
-          return;
-        }
+async function visitPreBlocks(
+  parent: Root | Element,
+  config: Config,
+  diagnostics: Diagnostic[],
+  tokenizer: CodeTokenizer,
+): Promise<void> {
+  for (let index = 0; index < parent.children.length; index += 1) {
+    const child = parent.children[index];
+    if (!child || child.type !== "element") continue;
+    if (child.tagName === "pre") {
+      await highlightPre(child, parent, index, config, diagnostics, tokenizer);
+      continue;
+    }
+    await visitPreBlocks(child, config, diagnostics, tokenizer);
+  }
+}
 
-        const languageName = languageFrom(canonical.code);
-        if (!languageName) return;
-        const language = resolveCodeLanguage(languageName);
-        if (language === "plaintext") return;
-        if (!language) {
-          reportCodeDiagnostic(diagnostics, pre, {
-            code: "unsupported-code-language",
-            severity: "info",
-            message: `Code language ${JSON.stringify(languageName)} is not supported; preserved the plain code block.`,
-          });
-          return;
-        }
+async function highlightPre(
+  pre: Element,
+  parent: Root | Element,
+  index: number,
+  config: Config,
+  diagnostics: Diagnostic[],
+  tokenizer: CodeTokenizer,
+): Promise<void> {
+  const claimedLanguage = claimedCodeLanguage(pre);
+  const canonical = canonicalCodeBlock(pre);
+  if (!canonical) {
+    if (claimedLanguage) {
+      reportCodeDiagnostic(diagnostics, pre, {
+        code: "code-highlighting-failed",
+        severity: "warning",
+        message: `Could not highlight ${claimedLanguage} code because the code block structure was not canonical; preserved the plain code block.`,
+      });
+    }
+    return;
+  }
 
-        const sourceWithSatteriNewline = canonical.text.value;
-        const source = sourceWithSatteriNewline.endsWith("\n")
-          ? sourceWithSatteriNewline.slice(0, -1)
-          : sourceWithSatteriNewline;
+  const languageName = languageFrom(canonical.code);
+  if (!languageName) return;
+  const language = resolveCodeLanguage(languageName);
+  if (language === "plaintext") return;
+  if (!language) {
+    reportCodeDiagnostic(diagnostics, pre, {
+      code: "unsupported-code-language",
+      severity: "info",
+      message: `Code language ${JSON.stringify(languageName)} is not supported; preserved the plain code block.`,
+    });
+    return;
+  }
 
-        if (source.length > MAX_CODE_UNITS) {
-          reportCodeDiagnostic(diagnostics, pre, {
-            code: "code-highlighting-skipped",
-            severity: "warning",
-            message: `Skipped ${language} code highlighting because the block exceeds ${MAX_CODE_UNITS} UTF-16 code units.`,
-          });
-          return;
-        }
+  const sourceWithTerminalNewline = canonical.text.value;
+  const source = sourceWithTerminalNewline.endsWith("\n")
+    ? sourceWithTerminalNewline.slice(0, -1)
+    : sourceWithTerminalNewline;
 
-        const sourceLines = source.split("\n");
-        if (sourceLines.length > MAX_CODE_LINES) {
-          reportCodeDiagnostic(diagnostics, pre, {
-            code: "code-highlighting-skipped",
-            severity: "warning",
-            message: `Skipped ${language} code highlighting because the block exceeds ${MAX_CODE_LINES} logical lines.`,
-          });
-          return;
-        }
-        if (sourceLines.some((line) => displayColumns(line) > MAX_DISPLAY_COLUMNS)) {
-          // emailHastPlugin already emitted the warning from the original source.
-          return;
-        }
+  if (source.length > MAX_CODE_UNITS) {
+    reportCodeDiagnostic(diagnostics, pre, {
+      code: "code-highlighting-skipped",
+      severity: "warning",
+      message: `Skipped ${language} code highlighting because the block exceeds ${MAX_CODE_UNITS} UTF-16 code units.`,
+    });
+    return;
+  }
 
-        const metadata = parseCodeMeta(metaFrom(canonical.code), sourceLines.length);
-        if (metadata.invalidHighlight !== undefined) {
-          reportCodeDiagnostic(diagnostics, pre, {
-            code: "invalid-code-highlight",
-            severity: "warning",
-            message: `Ignored invalid code line highlight expression ${JSON.stringify(metadata.invalidHighlight)}.`,
-          });
-        }
+  const sourceLines = source.split("\n");
+  if (sourceLines.length > MAX_CODE_LINES) {
+    reportCodeDiagnostic(diagnostics, pre, {
+      code: "code-highlighting-skipped",
+      severity: "warning",
+      message: `Skipped ${language} code highlighting because the block exceeds ${MAX_CODE_LINES} logical lines.`,
+    });
+    return;
+  }
+  if (sourceLines.some((line) => displayColumns(line) > MAX_DISPLAY_COLUMNS)) {
+    // sanitizeEmailHast already emitted the warning from the original source.
+    return;
+  }
 
-        let highlighted: HighlightedCode;
-        try {
-          highlighted = await tokenizer.tokenize(source, language, config.markdown.syntaxHighlightingMode);
-        } catch {
-          reportCodeDiagnostic(diagnostics, pre, {
-            code: "code-highlighting-failed",
-            severity: "warning",
-            message: `Could not highlight ${language} code; preserved the plain code block.`,
-          });
-          return;
-        }
+  const metadata = parseCodeMeta(metaFrom(canonical.code), sourceLines.length);
+  if (metadata.invalidHighlight !== undefined) {
+    reportCodeDiagnostic(diagnostics, pre, {
+      code: "invalid-code-highlight",
+      severity: "warning",
+      message: `Ignored invalid code line highlight expression ${JSON.stringify(metadata.invalidHighlight)}.`,
+    });
+  }
 
-        const tokenValidation = validateHighlightedSource(highlighted, source, sourceLines);
-        if (!tokenValidation.ok) {
-          reportCodeDiagnostic(diagnostics, pre, {
-            code: "code-highlighting-failed",
-            severity: "warning",
-            message: `Could not validate highlighted ${language} code; preserved the plain code block.`,
-          });
-          return;
-        }
-        if (tokenValidation.tokenCount > MAX_HIGHLIGHT_TOKENS) {
-          reportCodeDiagnostic(diagnostics, pre, {
-            code: "code-highlighting-skipped",
-            severity: "warning",
-            message: `Skipped ${language} code highlighting because it produced more than ${MAX_HIGHLIGHT_TOKENS} tokens.`,
-          });
-          return;
-        }
+  let highlighted: HighlightedCode;
+  try {
+    highlighted = await tokenizer.tokenize(source, language, config.markdown.syntaxHighlightingMode);
+  } catch {
+    reportCodeDiagnostic(diagnostics, pre, {
+      code: "code-highlighting-failed",
+      severity: "warning",
+      message: `Could not highlight ${language} code; preserved the plain code block.`,
+    });
+    return;
+  }
 
-        ctx.replaceNode(
-          pre,
-          renderHighlightedCode(
-            highlighted,
-            metadata,
-            EMAIL_CODE_PROFILES[config.markdown.syntaxHighlightingMode],
-          ),
-        );
-      },
-    },
-  });
+  const tokenValidation = validateHighlightedSource(highlighted, source, sourceLines);
+  if (!tokenValidation.ok) {
+    reportCodeDiagnostic(diagnostics, pre, {
+      code: "code-highlighting-failed",
+      severity: "warning",
+      message: `Could not validate highlighted ${language} code; preserved the plain code block.`,
+    });
+    return;
+  }
+  if (tokenValidation.tokenCount > MAX_HIGHLIGHT_TOKENS) {
+    reportCodeDiagnostic(diagnostics, pre, {
+      code: "code-highlighting-skipped",
+      severity: "warning",
+      message: `Skipped ${language} code highlighting because it produced more than ${MAX_HIGHLIGHT_TOKENS} tokens.`,
+    });
+    return;
+  }
+
+  parent.children[index] = renderHighlightedCode(
+    highlighted,
+    metadata,
+    EMAIL_CODE_PROFILES[config.markdown.syntaxHighlightingMode],
+  );
 }
 
 interface CanonicalCodeBlock {

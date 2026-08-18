@@ -2,7 +2,8 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { defaultConfig, loadConfig, mergeConfig } from "../src/config";
+import { defaultConfig, mergeConfig, validateResolvedConfig } from "../src/config";
+import { loadConfig } from "../src/config-loader";
 import { deriveOutputPath } from "../src/cli";
 
 const tempDirs: string[] = [];
@@ -209,6 +210,74 @@ describe("config", () => {
         },
       }).theme.linkColor,
     ).toBe("#ff00ff");
+  });
+
+  test("validateResolvedConfig accepts a cloned default config", () => {
+    const validated = validateResolvedConfig(defaultConfig);
+    expect(validated).toEqual(defaultConfig);
+    expect(validated).not.toBe(defaultConfig);
+    expect(validated.markdown).not.toBe(defaultConfig.markdown);
+    expect(validated.email).not.toBe(defaultConfig.email);
+    expect(validated.theme).not.toBe(defaultConfig.theme);
+  });
+
+  test("validateResolvedConfig ignores extra unknown keys", () => {
+    expect(
+      validateResolvedConfig({
+        extra: true,
+        markdown: { ...defaultConfig.markdown, extra: 1 },
+        email: { ...defaultConfig.email, extra: "nope" },
+        theme: { ...defaultConfig.theme, extraColor: "#fff" },
+      }),
+    ).toEqual(defaultConfig);
+  });
+
+  test("validateResolvedConfig rejects malformed types", () => {
+    expect(() =>
+      validateResolvedConfig({
+        ...defaultConfig,
+        markdown: { ...defaultConfig.markdown, gfm: "yes" },
+      }),
+    ).toThrow("Invalid config: markdown.gfm must be a boolean.");
+    expect(() =>
+      validateResolvedConfig({
+        ...defaultConfig,
+        email: { ...defaultConfig.email, containerWidth: "600" },
+      }),
+    ).toThrow("Invalid config: email.containerWidth must be a positive number.");
+    expect(() =>
+      validateResolvedConfig({
+        ...defaultConfig,
+        markdown: { ...defaultConfig.markdown, syntaxHighlightingMode: "auto" },
+      }),
+    ).toThrow('Invalid config: markdown.syntaxHighlightingMode must be "light" or "dark".');
+  });
+
+  test("validateResolvedConfig rejects unsafe theme tokens", () => {
+    expect(() =>
+      validateResolvedConfig({
+        ...defaultConfig,
+        theme: { ...defaultConfig.theme, linkColor: "blue; display:flex" },
+      }),
+    ).toThrow("Invalid config: theme.linkColor contains unsupported CSS characters or functions.");
+    expect(() =>
+      validateResolvedConfig({
+        ...defaultConfig,
+        theme: { ...defaultConfig.theme, backgroundColor: "url(https://example.com/x.png)" },
+      }),
+    ).toThrow("Invalid config: theme.backgroundColor contains unsupported CSS characters or functions.");
+    expect(() =>
+      validateResolvedConfig({
+        ...defaultConfig,
+        theme: { ...defaultConfig.theme, contentPadding: "calc(16px + 1vw)" },
+      }),
+    ).toThrow("Invalid config: theme.contentPadding contains unsupported CSS characters or functions.");
+    expect(() =>
+      validateResolvedConfig({
+        ...defaultConfig,
+        email: { ...defaultConfig.email, outerPadding: "oklch(60% 0.2 40)" },
+      }),
+    ).toThrow("Invalid config: email.outerPadding contains unsupported CSS characters or functions.");
   });
 
   test("loads an explicit TOML config file", async () => {
