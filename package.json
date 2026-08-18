@@ -30,7 +30,7 @@
     }
   },
   "bin": {
-    "mdtoemail": "./dist/cli.js"
+    "mdtoemail": "dist/cli.js"
   },
   "files": [
     "dist",
@@ -44,6 +44,7 @@
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit",
     "build": "rm -rf dist && bunx tsc -p tsconfig.build.json && bun build ./src/cli.ts --target=bun --outdir=dist",
+    "prepack": "bun run build",
     "test:candidate": "bun run test/package-candidate.ts"
   },
   "dependencies": {

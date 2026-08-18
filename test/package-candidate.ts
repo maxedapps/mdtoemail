@@ -43,8 +43,12 @@ async function main(): Promise<void> {
 
 function packOnce(packDir: string): string {
   const result = run(root, ["bun", "pm", "pack", "--destination", packDir, "--quiet"]);
-  const packed = result.stdout.trim() || join(packDir, `mdtoemail-${version}.tgz`);
-  const tarball = packed.endsWith(".tgz") ? packed : join(packDir, packed);
+  const packed = result.stdout
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.endsWith(".tgz"))
+    .at(-1);
+  const tarball = packed ?? join(packDir, `mdtoemail-${version}.tgz`);
   if (!tarball.endsWith(`mdtoemail-${version}.tgz`)) {
     throw new Error(`expected mdtoemail-${version}.tgz from bun pm pack, got: ${packed || result.stderr}`);
   }
@@ -87,12 +91,16 @@ function inspectTarball(tarball: string): void {
     main?: string;
     types?: string;
     exports?: { "."?: { import?: string; types?: string } };
+    bin?: Record<string, string>;
   };
   if (pkg.dependencies && Object.keys(pkg.dependencies).some((name) => name.toLowerCase().includes("satteri"))) {
     throw new Error("packed package.json still depends on satteri");
   }
   if (pkg.main !== "./dist/index.js" || pkg.types !== "./dist/index.d.ts" || pkg.exports?.["."]?.import !== "./dist/index.js") {
     throw new Error("packed package.json does not ship the dist library API");
+  }
+  if (pkg.bin?.mdtoemail !== "dist/cli.js") {
+    throw new Error("packed package.json does not expose the mdtoemail CLI binary");
   }
 
   console.log(`tarball contains ${names.length} entries`);
