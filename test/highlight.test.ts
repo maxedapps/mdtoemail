@@ -1,6 +1,6 @@
-import { describe, expect, test } from "bun:test";
-import type { Root } from "hast";
-import { defaultConfig, type Config } from "../src/config";
+import { describe, expect, test } from "vitest";
+import type { Element, Root, RootContent } from "hast";
+import { defaultConfig, type Config } from "../src/config.ts";
 import {
   DEFAULT_TAB_WIDTH,
   EMAIL_CODE_PROFILE,
@@ -19,10 +19,10 @@ import {
   type CodeTokenizer,
   type HighlightToken,
   type SupportedCodeLanguage,
-} from "../src/highlight";
-import { renderMarkdown } from "../src/markdown";
+} from "../src/highlight.ts";
+import { renderMarkdown } from "../src/markdown.ts";
 
-const aliases: Record<string, SupportedCodeLanguage> = {
+const aliases = {
   bash: "bash",
   sh: "bash",
   shell: "bash",
@@ -45,9 +45,9 @@ const aliases: Record<string, SupportedCodeLanguage> = {
   typescript: "typescript",
   yaml: "yaml",
   yml: "yaml",
-};
+} satisfies Record<string, SupportedCodeLanguage>;
 
-const samples: Record<SupportedCodeLanguage, string> = {
+const samples = {
   bash: 'echo "hello"',
   css: "body { color: red; }",
   diff: "-old\n+new",
@@ -62,7 +62,7 @@ const samples: Record<SupportedCodeLanguage, string> = {
   tsx: "const view: JSX.Element = <p>Hello</p>;",
   typescript: "const answer: number = 42;",
   yaml: "answer: 42",
-};
+} satisfies Record<SupportedCodeLanguage, string>;
 
 function token(text: string, overrides: Partial<HighlightToken> = {}): HighlightToken {
   return {
@@ -74,11 +74,42 @@ function token(text: string, overrides: Partial<HighlightToken> = {}): Highlight
   };
 }
 
+function malformedToken(
+  text: string,
+  key: keyof HighlightToken,
+  value: unknown,
+  overrides: Partial<HighlightToken> = {},
+): HighlightToken {
+  const fixture = token(text, overrides);
+  Object.defineProperty(fixture, key, { value });
+  return fixture;
+}
+
 describe("code language and tokenizer contracts", () => {
   test("resolves every exact canonical language and alias case-insensitively", () => {
     expect(Object.keys(aliases).sort()).toEqual([
-      "bash", "css", "diff", "html", "javascript", "js", "json", "jsx", "markdown", "md", "py", "python",
-      "sh", "shell", "shellscript", "sql", "toml", "ts", "tsx", "typescript", "yaml", "yml",
+      "bash",
+      "css",
+      "diff",
+      "html",
+      "javascript",
+      "js",
+      "json",
+      "jsx",
+      "markdown",
+      "md",
+      "py",
+      "python",
+      "sh",
+      "shell",
+      "shellscript",
+      "sql",
+      "toml",
+      "ts",
+      "tsx",
+      "typescript",
+      "yaml",
+      "yml",
     ]);
 
     for (const [alias, canonical] of Object.entries(aliases)) {
@@ -125,13 +156,17 @@ describe("code language and tokenizer contracts", () => {
     const light = await defaultCodeTokenizer.tokenize(source, "typescript", "light");
     const dark = await defaultCodeTokenizer.tokenize(source, "typescript", "dark");
 
-    expect(light.flat().map((item) => item.color)).not.toEqual(dark.flat().map((item) => item.color));
+    expect(light.flat().map((item) => item.color)).not.toEqual(
+      dark.flat().map((item) => item.color),
+    );
     expect(dark.map((line) => line.map((item) => item.text).join("")).join("\n")).toBe(source);
     expect(dark.flat().some((item) => item.color === "#ff7b72")).toBe(true);
   });
 
   test("rejects unsupported runtime input before tokenization", async () => {
-    await expect(defaultCodeTokenizer.tokenize("x", "ruby" as SupportedCodeLanguage)).rejects.toThrow(
+    // SAFETY: this deliberately malformed fixture verifies the runtime guard before tokenization.
+    const unsupportedLanguage = "ruby" as SupportedCodeLanguage;
+    await expect(defaultCodeTokenizer.tokenize("x", unsupportedLanguage)).rejects.toThrow(
       "Unsupported code language: ruby",
     );
   });
@@ -200,11 +235,13 @@ describe("parseCodeMeta", () => {
   });
 
   test("rejects highlights when lineCount cannot safely bound expansion", () => {
-    expect([...parseCodeMeta("{1-200}", MAX_CODE_LINES).highlightedLines]).toHaveLength(MAX_CODE_LINES);
-    expect(parseCodeMeta("{1}", MAX_CODE_LINES + 1).invalidHighlight).toBe("{1}");
-    expect(parseCodeMeta(`{1-${Number.MAX_SAFE_INTEGER}}`, Number.MAX_SAFE_INTEGER).invalidHighlight).toBe(
-      `{1-${Number.MAX_SAFE_INTEGER}}`,
+    expect([...parseCodeMeta("{1-200}", MAX_CODE_LINES).highlightedLines]).toHaveLength(
+      MAX_CODE_LINES,
     );
+    expect(parseCodeMeta("{1}", MAX_CODE_LINES + 1).invalidHighlight).toBe("{1}");
+    expect(
+      parseCodeMeta(`{1-${Number.MAX_SAFE_INTEGER}}`, Number.MAX_SAFE_INTEGER).invalidHighlight,
+    ).toBe(`{1-${Number.MAX_SAFE_INTEGER}}`);
     expect(parseCodeMeta("{1}", Number.MAX_SAFE_INTEGER + 1).invalidHighlight).toBe("{1}");
     expect(parseCodeMeta("{1}", -1).invalidHighlight).toBe("{1}");
   });
@@ -236,7 +273,13 @@ describe("email code profile and limits", () => {
     });
     expect(Object.isFrozen(EMAIL_CODE_PROFILES)).toBe(true);
     expect(Object.isFrozen(EMAIL_CODE_PROFILES.dark)).toBe(true);
-    expect({ MAX_CODE_UNITS, MAX_CODE_LINES, MAX_HIGHLIGHT_TOKENS, MAX_DISPLAY_COLUMNS, DEFAULT_TAB_WIDTH }).toEqual({
+    expect({
+      MAX_CODE_UNITS,
+      MAX_CODE_LINES,
+      MAX_HIGHLIGHT_TOKENS,
+      MAX_DISPLAY_COLUMNS,
+      DEFAULT_TAB_WIDTH,
+    }).toEqual({
       MAX_CODE_UNITS: 20_000,
       MAX_CODE_LINES: 200,
       MAX_HIGHLIGHT_TOKENS: 8_000,
@@ -260,22 +303,33 @@ describe("codeHighlightPlugin", () => {
     const tokenizer: CodeTokenizer = {
       async tokenize(code) {
         expect(code).toBe("  const x = 1;");
-        return [[
-          token("  "),
-          token("const", { color: "#D73A49", bold: true }),
-          token(" x", { color: "#24292e", italic: true, underline: true }),
-          token(" = 1;", { color: "not-a-color", italic: "yes" as unknown as boolean }),
-        ]];
+        return [
+          [
+            token("  "),
+            token("const", { color: "#D73A49", bold: true }),
+            token(" x", { color: "#24292e", italic: true, underline: true }),
+            malformedToken(" = 1;", "italic", "yes", { color: "not-a-color" }),
+          ],
+        ];
       },
     };
 
-    const rendered = await renderWithTokenizer("```ts {1} lineNumbers\n  const x = 1;\n```", tokenizer);
+    const rendered = await renderWithTokenizer(
+      "```ts {1} lineNumbers\n  const x = 1;\n```",
+      tokenizer,
+    );
 
     expect(rendered.diagnostics).toEqual([]);
-    expect(rendered.html).toContain('<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#f6f8fa"');
-    expect(rendered.html).toContain('<td aria-hidden="true" align="right" valign="top" width="40" bgcolor="#fff8c5"');
+    expect(rendered.html).toContain(
+      '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#f6f8fa"',
+    );
+    expect(rendered.html).toContain(
+      '<td aria-hidden="true" align="right" valign="top" width="40" bgcolor="#fff8c5"',
+    );
     expect(rendered.html).toContain('<span style="color:#d73a49;font-weight:700">const</span>');
-    expect(rendered.html).toContain('<span style="font-style:italic;text-decoration:underline"> x</span>');
+    expect(rendered.html).toContain(
+      '<span style="font-style:italic;text-decoration:underline"> x</span>',
+    );
     expect(rendered.html).toContain("\u00a0\u00a0");
     expect(rendered.html).not.toContain("not-a-color");
     expect(rendered.html).not.toContain("font-style:yes");
@@ -312,7 +366,7 @@ describe("codeHighlightPlugin", () => {
     const tokenizer: CodeTokenizer = {
       async tokenize(code) {
         seen.push(code);
-        return code.split("\n").map((line) => line ? [token(line)] : []);
+        return code.split("\n").map((line) => (line ? [token(line)] : []));
       },
     };
 
@@ -325,12 +379,21 @@ describe("codeHighlightPlugin", () => {
 
   test("preserves disabled, unlabelled, plaintext, and unsupported blocks", async () => {
     let calls = 0;
-    const tokenizer: CodeTokenizer = { async tokenize() { calls += 1; return []; } };
+    const tokenizer: CodeTokenizer = {
+      async tokenize() {
+        calls += 1;
+        return [];
+      },
+    };
     const enabled = await renderWithTokenizer(
       "```\nnone\n```\n\n```text\nplain\n```\n\n```RUBY\nruby\n```\n\n```ruby\nagain\n```",
       tokenizer,
     );
-    const disabled = await renderWithTokenizer("```ts\nconst x = 1;\n```", tokenizer, defaultConfig);
+    const disabled = await renderWithTokenizer(
+      "```ts\nconst x = 1;\n```",
+      tokenizer,
+      defaultConfig,
+    );
 
     expect(calls).toBe(0);
     expect(enabled.html.match(/<pre /g)).toHaveLength(4);
@@ -360,32 +423,65 @@ describe("codeHighlightPlugin", () => {
 
     expect(result.html).toContain("<pre");
     expect(result.html).toContain("x\n</code>extra</pre>");
-    expect(result.diagnostics).toEqual([{
-      code: "code-highlighting-failed",
-      severity: "warning",
-      message: "Could not highlight ts code because the code block structure was not canonical; preserved the plain code block.",
-      line: 3,
-    }]);
+    expect(result.diagnostics).toEqual([
+      {
+        code: "code-highlighting-failed",
+        severity: "warning",
+        message:
+          "Could not highlight ts code because the code block structure was not canonical; preserved the plain code block.",
+        line: 3,
+      },
+    ]);
   });
 
   test("catches tokenizer errors and rejects line, token, and source mismatches", async () => {
     const fixtures: Array<[CodeTokenizer, string]> = [
-      [{ async tokenize() { throw new Error("secret source"); } }, "Could not highlight typescript code; preserved the plain code block."],
-      [{ async tokenize() { return []; } }, "Could not validate highlighted typescript code; preserved the plain code block."],
-      [{ async tokenize() { return [[token("different")]]; } }, "Could not validate highlighted typescript code; preserved the plain code block."],
-      [{ async tokenize() { return [[{ ...token("x"), text: 42 as unknown as string }]]; } }, "Could not validate highlighted typescript code; preserved the plain code block."],
+      [
+        {
+          async tokenize() {
+            throw new Error("secret source");
+          },
+        },
+        "Could not highlight typescript code; preserved the plain code block.",
+      ],
+      [
+        {
+          async tokenize() {
+            return [];
+          },
+        },
+        "Could not validate highlighted typescript code; preserved the plain code block.",
+      ],
+      [
+        {
+          async tokenize() {
+            return [[token("different")]];
+          },
+        },
+        "Could not validate highlighted typescript code; preserved the plain code block.",
+      ],
+      [
+        {
+          async tokenize() {
+            return [[malformedToken("x", "text", 42)]];
+          },
+        },
+        "Could not validate highlighted typescript code; preserved the plain code block.",
+      ],
     ];
 
     for (const [tokenizer, message] of fixtures) {
       const rendered = await renderWithTokenizer("```ts\nx\n```", tokenizer);
       expect(rendered.html).toContain("<pre");
       expect(rendered.html).toContain(">x\n</code>");
-      expect(rendered.diagnostics).toEqual([{
-        code: "code-highlighting-failed",
-        severity: "warning",
-        message,
-        line: 1,
-      }]);
+      expect(rendered.diagnostics).toEqual([
+        {
+          code: "code-highlighting-failed",
+          severity: "warning",
+          message,
+          line: 1,
+        },
+      ]);
       expect(JSON.stringify(rendered.diagnostics)).not.toContain("secret source");
     }
   });
@@ -395,35 +491,64 @@ describe("codeHighlightPlugin", () => {
     const tokenizer: CodeTokenizer = {
       async tokenize(code) {
         calls += 1;
-        if (code === "x") return [[token("x"), ...Array.from({ length: MAX_HIGHLIGHT_TOKENS }, () => token(""))]];
+        if (code === "x")
+          return [[token("x"), ...Array.from({ length: MAX_HIGHLIGHT_TOKENS }, () => token(""))]];
         return code.split("\n").map((line) => [token(line)]);
       },
     };
-    const units = await renderWithTokenizer(`\`\`\`ts\n${"x".repeat(MAX_CODE_UNITS + 1)}\n\`\`\``, tokenizer);
-    const newlineDense = await renderWithTokenizer(`\`\`\`ts\n${"\n".repeat(MAX_CODE_UNITS + 100)}\`\`\``, tokenizer);
-    const lines = await renderWithTokenizer(`\`\`\`ts\n${Array.from({ length: MAX_CODE_LINES + 1 }, () => "x").join("\n")}\n\`\`\``, tokenizer);
-    const columns = await renderWithTokenizer(`\`\`\`ts\n${"x".repeat(MAX_DISPLAY_COLUMNS + 1)}\n\`\`\``, tokenizer);
-    const maxLines = await renderWithTokenizer(`\`\`\`ts\n${Array.from({ length: MAX_CODE_LINES }, () => "y").join("\n")}\n\`\`\``, tokenizer);
-    const maxColumns = await renderWithTokenizer(`\`\`\`ts\n${"z".repeat(MAX_DISPLAY_COLUMNS)}\n\`\`\``, tokenizer);
+    const units = await renderWithTokenizer(
+      `\`\`\`ts\n${"x".repeat(MAX_CODE_UNITS + 1)}\n\`\`\``,
+      tokenizer,
+    );
+    const newlineDense = await renderWithTokenizer(
+      `\`\`\`ts\n${"\n".repeat(MAX_CODE_UNITS + 100)}\`\`\``,
+      tokenizer,
+    );
+    const lines = await renderWithTokenizer(
+      `\`\`\`ts\n${Array.from({ length: MAX_CODE_LINES + 1 }, () => "x").join("\n")}\n\`\`\``,
+      tokenizer,
+    );
+    const columns = await renderWithTokenizer(
+      `\`\`\`ts\n${"x".repeat(MAX_DISPLAY_COLUMNS + 1)}\n\`\`\``,
+      tokenizer,
+    );
+    const maxLines = await renderWithTokenizer(
+      `\`\`\`ts\n${Array.from({ length: MAX_CODE_LINES }, () => "y").join("\n")}\n\`\`\``,
+      tokenizer,
+    );
+    const maxColumns = await renderWithTokenizer(
+      `\`\`\`ts\n${"z".repeat(MAX_DISPLAY_COLUMNS)}\n\`\`\``,
+      tokenizer,
+    );
     const tokens = await renderWithTokenizer("```ts\nx\n```", tokenizer);
 
     expect(calls).toBe(3);
-    expect(units.diagnostics.map((item) => item.code)).toEqual(["long-code-line", "code-highlighting-skipped"]);
-    expect(newlineDense.diagnostics).toEqual([{
-      code: "code-highlighting-skipped",
-      severity: "warning",
-      message: `Skipped typescript code highlighting because the block exceeds ${MAX_CODE_UNITS} UTF-16 code units.`,
-      line: 1,
-    }]);
+    expect(units.diagnostics.map((item) => item.code)).toEqual([
+      "long-code-line",
+      "code-highlighting-skipped",
+    ]);
+    expect(newlineDense.diagnostics).toEqual([
+      {
+        code: "code-highlighting-skipped",
+        severity: "warning",
+        message: `Skipped typescript code highlighting because the block exceeds ${MAX_CODE_UNITS} UTF-16 code units.`,
+        line: 1,
+      },
+    ]);
     expect(lines.diagnostics.map((item) => item.code)).toEqual(["code-highlighting-skipped"]);
     expect(columns.diagnostics.map((item) => item.code)).toEqual(["long-code-line"]);
     expect(tokens.diagnostics.map((item) => item.code)).toEqual(["code-highlighting-skipped"]);
-    expect([units, newlineDense, lines, columns, tokens].map((rendered) => rendered.diagnostics.at(-1)?.line)).toEqual([1, 1, 1, 1, 1]);
+    expect(
+      [units, newlineDense, lines, columns, tokens].map(
+        (rendered) => rendered.diagnostics.at(-1)?.line,
+      ),
+    ).toEqual([1, 1, 1, 1, 1]);
     expect(maxLines.diagnostics).toEqual([]);
     expect(maxColumns.diagnostics).toEqual([]);
     expect(maxLines.html.match(/<code /g)).toHaveLength(MAX_CODE_LINES);
     expect(maxColumns.html).toContain('<table role="presentation"');
-    for (const rendered of [units, newlineDense, lines, columns, tokens]) expect(rendered.html).toContain("<pre");
+    for (const rendered of [units, newlineDense, lines, columns, tokens])
+      expect(rendered.html).toContain("<pre");
     expect(units.html).toContain("x".repeat(MAX_CODE_UNITS + 1));
     expect(lines.html).toContain(Array.from({ length: MAX_CODE_LINES + 1 }, () => "x").join("\n"));
     expect(columns.html).toContain("x".repeat(MAX_DISPLAY_COLUMNS + 1));
@@ -433,15 +558,19 @@ describe("codeHighlightPlugin", () => {
   test("warns for malformed huge metadata while retaining colors and lineNumbers", async () => {
     const expression = `{1-${Number.MAX_SAFE_INTEGER}}`;
     const rendered = await renderWithTokenizer(`\`\`\`ts ${expression} lineNumbers\nx\n\`\`\``, {
-      async tokenize() { return [[token("x", { color: "#123456" })]]; },
+      async tokenize() {
+        return [[token("x", { color: "#123456" })]];
+      },
     });
 
-    expect(rendered.diagnostics).toEqual([{
-      code: "invalid-code-highlight",
-      severity: "warning",
-      message: `Ignored invalid code line highlight expression ${JSON.stringify(expression)}.`,
-      line: 1,
-    }]);
+    expect(rendered.diagnostics).toEqual([
+      {
+        code: "invalid-code-highlight",
+        severity: "warning",
+        message: `Ignored invalid code line highlight expression ${JSON.stringify(expression)}.`,
+        line: 1,
+      },
+    ]);
     expect(rendered.html).toContain('aria-hidden="true"');
     expect(rendered.html).toContain('style="color:#123456"');
     expect(rendered.html).not.toContain('bgcolor="#fff8c5"');
@@ -453,7 +582,7 @@ describe("toEmailDisplayTokens", () => {
     const input = [
       token("  a ", { color: "#111111" }),
       token(" b  ", { color: "#222222", bold: true }),
-    ] as const;
+    ];
     const before = structuredClone(input);
     const output = toEmailDisplayTokens(input);
 
@@ -467,7 +596,7 @@ describe("toEmailDisplayTokens", () => {
   });
 
   test("expands tabs at streaming display-column stops and merges equal styles", () => {
-    const style = { color: "#123456", italic: true } as const;
+    const style = { color: "#123456", italic: true };
     const input = [token("\tX", style), token("\tY\t", style)];
     const output = toEmailDisplayTokens(input);
 
@@ -492,18 +621,26 @@ describe("toEmailDisplayTokens", () => {
   });
 
   test("rejects invalid tab widths", () => {
-    expect(() => toEmailDisplayTokens([], 1.5)).toThrow("tabWidth must be a positive safe integer.");
+    expect(() => toEmailDisplayTokens([], 1.5)).toThrow(
+      "tabWidth must be a positive safe integer.",
+    );
   });
 });
 
-const highlightingConfig = (syntaxHighlightingMode: Config["markdown"]["syntaxHighlightingMode"] = "light"): Config => ({
+const highlightingConfig = (
+  syntaxHighlightingMode: Config["markdown"]["syntaxHighlightingMode"] = "light",
+): Config => ({
   ...defaultConfig,
   markdown: { ...defaultConfig.markdown, syntaxHighlighting: true, syntaxHighlightingMode },
   email: { ...defaultConfig.email },
   theme: { ...defaultConfig.theme },
 });
 
-async function renderWithTokenizer(markdown: string, tokenizer: CodeTokenizer, config = highlightingConfig()) {
+async function renderWithTokenizer(
+  markdown: string,
+  tokenizer: CodeTokenizer,
+  config = highlightingConfig(),
+) {
   return renderMarkdown(markdown, config, { tokenizer });
 }
 
@@ -513,13 +650,11 @@ function appendTextToFirstPre(tree: Root, value: string): void {
   pre.children.push({ type: "text", value });
 }
 
-function findPre(node: { type: string; tagName?: string; children?: readonly unknown[] }): Extract<Root["children"][number], { type: "element" }> | undefined {
-  if (node.type === "element" && node.tagName === "pre") {
-    return node as Extract<Root["children"][number], { type: "element" }>;
-  }
-  if (!node.children) return undefined;
+function findPre(node: Root | RootContent): Element | undefined {
+  if (node.type === "element" && node.tagName === "pre") return node;
+  if (node.type !== "root" && node.type !== "element") return undefined;
   for (const child of node.children) {
-    const match = findPre(child as { type: string; tagName?: string; children?: readonly unknown[] });
+    const match = findPre(child);
     if (match) return match;
   }
   return undefined;

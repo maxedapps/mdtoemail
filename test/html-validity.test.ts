@@ -1,8 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { parse, type DefaultTreeAdapterMap } from "parse5";
-import { defaultConfig, type Config } from "../src/config";
-import { renderEmailDocument } from "../src/email";
-import { renderMarkdown } from "../src/markdown";
+import { defaultConfig, type Config } from "../src/config.ts";
+import { renderEmailDocument } from "../src/email.ts";
+import { renderMarkdown } from "../src/markdown.ts";
 
 type Node = DefaultTreeAdapterMap["node"];
 type Element = DefaultTreeAdapterMap["element"];
@@ -20,20 +20,32 @@ const darkHighlightedConfig: Config = {
   markdown: { ...highlightedConfig.markdown, syntaxHighlightingMode: "dark" },
 };
 
-const allowedAttributes: Readonly<Record<string, ReadonlySet<string>>> = {
-  table: new Set(["role", "width", "cellspacing", "cellpadding", "border", "bgcolor", "style"]),
-  tbody: new Set(),
-  tr: new Set(),
-  td: new Set(["aria-hidden", "align", "valign", "width", "bgcolor", "style"]),
-  code: new Set(["style"]),
-  span: new Set(["style"]),
-  br: new Set(),
-};
+const allowedAttributes = new Map<string, ReadonlySet<string>>([
+  ["table", new Set(["role", "width", "cellspacing", "cellpadding", "border", "bgcolor", "style"])],
+  ["tbody", new Set()],
+  ["tr", new Set()],
+  ["td", new Set(["aria-hidden", "align", "valign", "width", "bgcolor", "style"])],
+  ["code", new Set(["style"])],
+  ["span", new Set(["style"])],
+  ["br", new Set()],
+]);
 
 const allowedStyleProperties = new Set([
-  "width", "padding", "font-family", "font-size", "line-height", "mso-line-height-rule", "color",
-  "background-color", "border-collapse", "mso-table-lspace", "mso-table-rspace", "table-layout",
-  "font-weight", "font-style", "text-decoration",
+  "width",
+  "padding",
+  "font-family",
+  "font-size",
+  "line-height",
+  "mso-line-height-rule",
+  "color",
+  "background-color",
+  "border-collapse",
+  "mso-table-lspace",
+  "mso-table-rspace",
+  "table-layout",
+  "font-weight",
+  "font-style",
+  "text-decoration",
 ]);
 
 describe("highlighted full-document HTML validity", () => {
@@ -50,13 +62,20 @@ describe("highlighted full-document HTML validity", () => {
     for (const [markdown, config] of fixtures) {
       const html = await fullDocument(markdown, config);
       const errors: string[] = [];
-      parse(html, { onParseError(error) { errors.push(error.code); } });
+      parse(html, {
+        onParseError(error) {
+          errors.push(error.code);
+        },
+      });
       expect(errors, markdown).toEqual([]);
     }
   });
 
   test("retains exact explicit table hierarchy, one code cell per source line, and controlled attributes", async () => {
-    const html = await fullDocument("```ts {2} lineNumbers\n\tfirst\n\nthird\n```", highlightedConfig);
+    const html = await fullDocument(
+      "```ts {2} lineNumbers\n\tfirst\n\nthird\n```",
+      highlightedConfig,
+    );
     const document = parse(html);
     const outer = findHighlightOuterTable(document);
     expect(outer).toBeDefined();
@@ -70,32 +89,43 @@ describe("highlighted full-document HTML validity", () => {
 
     expect(rows.map((row) => row.tagName)).toEqual(["tr", "tr", "tr"]);
     expect(rows.map((row) => elementChildren(row).map((cell) => cell.tagName))).toEqual([
-      ["td", "td"], ["td", "td"], ["td", "td"],
+      ["td", "td"],
+      ["td", "td"],
+      ["td", "td"],
     ]);
     expect(rows.map((row) => textContent(elementChildren(row)[0]!))).toEqual(["1", "2", "3"]);
-    expect(rows.map((row) => {
-      const codeCell = elementChildren(row)[1]!;
-      return onlyElementChild(codeCell, "code");
-    }).map(textContent)).toEqual(["    first", "", "third"]);
+    expect(
+      rows
+        .map((row) => {
+          const codeCell = elementChildren(row)[1]!;
+          return onlyElementChild(codeCell, "code");
+        })
+        .map(textContent),
+    ).toEqual(["    first", "", "third"]);
     expect(findElements(rows[1]!, "br")).toHaveLength(1);
     expect(attribute(elementChildren(rows[1]!)[1]!, "bgcolor")).toBe("#fff8c5");
 
     const controlled = [outer!, ...findElements(outer!, "*")];
     for (const element of controlled) {
-      expect(Object.keys(allowedAttributes)).toContain(element.tagName);
-      const allowed = allowedAttributes[element.tagName]!;
+      expect(allowedAttributes.has(element.tagName)).toBe(true);
+      const allowed = allowedAttributes.get(element.tagName);
+      if (!allowed) throw new Error(`unexpected controlled element <${element.tagName}>`);
       for (const attr of element.attrs) {
         expect(allowed.has(attr.name), `${element.tagName}[${attr.name}]`).toBe(true);
         expect(attr.name).not.toMatch(/^(?:class|data-|on)/i);
         if (attr.name === "style") {
           expect(attr.value).not.toMatch(/(?:var\(|url\(|[<>])/i);
           for (const declaration of attr.value.split(";")) {
-            expect(allowedStyleProperties.has(declaration.split(":", 1)[0]!), declaration).toBe(true);
+            expect(allowedStyleProperties.has(declaration.split(":", 1)[0]!), declaration).toBe(
+              true,
+            );
           }
         }
       }
       if (element.tagName === "table") {
-        expect(Object.fromEntries(element.attrs.map((attr) => [attr.name, attr.value]))).toMatchObject({
+        expect(
+          Object.fromEntries(element.attrs.map((attr) => [attr.name, attr.value])),
+        ).toMatchObject({
           role: "presentation",
           width: "100%",
           cellspacing: "0",
@@ -106,16 +136,25 @@ describe("highlighted full-document HTML validity", () => {
       }
     }
     for (const span of findElements(outer!, "span")) {
-      expect(attribute(span, "style")).toMatch(/^(?:(?:color:#[0-9a-f]{6}|font-weight:700|font-style:italic|text-decoration:underline);?)+$/);
+      expect(attribute(span, "style")).toMatch(
+        /^(?:(?:color:#[0-9a-f]{6}|font-weight:700|font-style:italic|text-decoration:underline);?)+$/,
+      );
     }
   });
 
   test("uses the dark profile without changing the controlled tree", async () => {
-    const html = await fullDocument("```ts {1} lineNumbers\nconst x = 1;\n```", darkHighlightedConfig);
+    const html = await fullDocument(
+      "```ts {1} lineNumbers\nconst x = 1;\n```",
+      darkHighlightedConfig,
+    );
     const document = parse(html);
     const outer = findHighlightOuterTable(document, "#0d1117")!;
-    const numberCell = findElements(outer, "td").find((cell) => attribute(cell, "aria-hidden") === "true")!;
-    const highlightedCell = findElements(outer, "td").find((cell) => attribute(cell, "bgcolor") === "#3b3424")!;
+    const numberCell = findElements(outer, "td").find(
+      (cell) => attribute(cell, "aria-hidden") === "true",
+    )!;
+    const highlightedCell = findElements(outer, "td").find(
+      (cell) => attribute(cell, "bgcolor") === "#3b3424",
+    )!;
 
     expect(attribute(outer, "bgcolor")).toBe("#0d1117");
     expect(attribute(numberCell, "style")).toContain("color:#8b949e");
@@ -137,7 +176,9 @@ describe("highlighted full-document HTML validity", () => {
 
     expect(cells).toHaveLength(1);
     expect(onlyElementChild(cells[0]!, "code")).toBeDefined();
-    expect(findElements(outer, "td").some((cell) => attribute(cell, "aria-hidden") === "true")).toBe(false);
+    expect(
+      findElements(outer, "td").some((cell) => attribute(cell, "aria-hidden") === "true"),
+    ).toBe(false);
   });
 
   test("keeps malicious-looking source as text under code without structural injection or foster parenting", async () => {

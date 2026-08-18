@@ -6,13 +6,13 @@ This warning-free fixture demonstrates the fixed syntax-highlighting profile.
 
 ```ts {2,4-6} lineNumbers
 interface Recipient {
-	name: string;
-	email: string;
+  name: string;
+  email: string;
 }
 
 const recipient: Recipient = {
-	name: "Miyuki 🌸",
-	email: "miyuki@example.com",
+  name: "Miyuki 🌸",
+  email: "miyuki@example.com",
 };
 
 const boundary = "verified"; // this line is exactly eighty display columns wide
@@ -35,6 +35,8 @@ print(greeting("Zoë"))
 ```html
 <section data-message="A&B">
   <p>Use <strong>escaped</strong> markup.</p>
-  <script>alert("not executable")</script>
+  <script>
+    alert("not executable");
+  </script>
 </section>
 ```

@@ -166,7 +166,11 @@ export function validateResolvedConfig(config: unknown): Config {
     markdown: {
       gfm: requireBoolean(markdown, "gfm", "markdown.gfm"),
       frontmatter: requireBoolean(markdown, "frontmatter", "markdown.frontmatter"),
-      syntaxHighlighting: requireBoolean(markdown, "syntaxHighlighting", "markdown.syntaxHighlighting"),
+      syntaxHighlighting: requireBoolean(
+        markdown,
+        "syntaxHighlighting",
+        "markdown.syntaxHighlighting",
+      ),
       syntaxHighlightingMode,
     },
     email: {
@@ -176,7 +180,7 @@ export function validateResolvedConfig(config: unknown): Config {
       strict: requireBoolean(email, "strict", "email.strict"),
       pretty: requireBoolean(email, "pretty", "email.pretty"),
     },
-    theme: {} as Config["theme"],
+    theme: { ...defaultConfig.theme },
   };
 
   for (const [, key] of themeStringFields) {
@@ -211,7 +215,9 @@ export function mergeConfig(raw: unknown, base: Config = defaultConfig): Config 
     const syntaxHighlightingMode = raw.markdown.syntax_highlighting_mode;
     if (syntaxHighlightingMode !== undefined) {
       if (syntaxHighlightingMode !== "light" && syntaxHighlightingMode !== "dark") {
-        throw new Error('Invalid config: markdown.syntax_highlighting_mode must be "light" or "dark".');
+        throw new Error(
+          'Invalid config: markdown.syntax_highlighting_mode must be "light" or "dark".',
+        );
       }
       config.markdown.syntaxHighlightingMode = syntaxHighlightingMode;
     }
@@ -264,7 +270,11 @@ export function mergeThemeConfig(raw: unknown, base: Config): Config {
       throw new Error("Invalid theme: email must be a table.");
     }
 
-    rejectUnknownKeys(raw.email, new Set(["container_width", "outer_padding"]), "Invalid theme: email");
+    rejectUnknownKeys(
+      raw.email,
+      new Set(["container_width", "outer_padding"]),
+      "Invalid theme: email",
+    );
     applyEmailLayoutFields(raw.email, config, "Invalid theme");
   }
 
@@ -286,23 +296,49 @@ function applyEmailLayoutFields(
   config: Config,
   prefix: "Invalid config" | "Invalid theme",
 ): void {
-  setNumber(rawEmail, "container_width", "email.container_width", (value) => {
-    config.email.containerWidth = value;
-  }, prefix);
-  setStyleString(rawEmail, "outer_padding", "email.outer_padding", (value) => {
-    config.email.outerPadding = value;
-  }, prefix);
+  setNumber(
+    rawEmail,
+    "container_width",
+    "email.container_width",
+    (value) => {
+      config.email.containerWidth = value;
+    },
+    prefix,
+  );
+  setStyleString(
+    rawEmail,
+    "outer_padding",
+    "email.outer_padding",
+    (value) => {
+      config.email.outerPadding = value;
+    },
+    prefix,
+  );
 }
 
-function applyThemeFields(rawTheme: Record<string, unknown>, config: Config, prefix: "Invalid config" | "Invalid theme"): void {
+function applyThemeFields(
+  rawTheme: Record<string, unknown>,
+  config: Config,
+  prefix: "Invalid config" | "Invalid theme",
+): void {
   for (const [tomlKey, configKey] of themeStringFields) {
-    setStyleString(rawTheme, tomlKey, `theme.${tomlKey}`, (value) => {
-      config.theme[configKey as ThemeConfigKey] = value;
-    }, prefix);
+    setStyleString(
+      rawTheme,
+      tomlKey,
+      `theme.${tomlKey}`,
+      (value) => {
+        config.theme[configKey] = value;
+      },
+      prefix,
+    );
   }
 }
 
-function rejectUnknownKeys(raw: Record<string, unknown>, allowed: Set<string>, label: string): void {
+function rejectUnknownKeys(
+  raw: Record<string, unknown>,
+  allowed: Set<string>,
+  label: string,
+): void {
   for (const key of Object.keys(raw)) {
     if (!allowed.has(key)) {
       throw new Error(`${label}.${key} is not allowed.`);
@@ -382,12 +418,16 @@ function setStyleString(
   apply(validateStyleValue(value, label, prefix));
 }
 
-function validateStyleValue(value: string, label: string, prefix: "Invalid config" | "Invalid theme"): string {
+function validateStyleValue(
+  value: string,
+  label: string,
+  prefix: "Invalid config" | "Invalid theme",
+): string {
   const trimmed = value.trim();
   if (
     !trimmed ||
     trimmed.length > 200 ||
-    /[\u0000-\u001f\u007f]/.test(trimmed) ||
+    hasAsciiControlCharacter(trimmed) ||
     /[;{}<>]/.test(trimmed) ||
     trimmed.includes("/*") ||
     trimmed.includes("*/") ||
@@ -398,6 +438,14 @@ function validateStyleValue(value: string, label: string, prefix: "Invalid confi
     throw new Error(`${prefix}: ${label} contains unsupported CSS characters or functions.`);
   }
   return trimmed;
+}
+
+function hasAsciiControlCharacter(value: string): boolean {
+  for (const character of value) {
+    const code = character.charCodeAt(0);
+    if (code <= 0x1f || code === 0x7f) return true;
+  }
+  return false;
 }
 
 function hasFragileEmailCss(value: string): boolean {

@@ -1,6 +1,6 @@
 # Notes on paying attention
 
-*August 18, 2026 · Berlin*
+_August 18, 2026 · Berlin_
 
 A second letter using the same shared newsletter configuration.
 

@@ -6,12 +6,18 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
+    "noUncheckedSideEffectImports": true,
     "skipLibCheck": true,
-    "types": ["bun-types"],
+    "types": ["node"],
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "isolatedModules": true,
+    "isolatedDeclarations": true,
+    "declaration": true,
+    "declarationMap": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"],
-  "exclude": ["test/worker"]
+  "include": ["src/**/*.ts", "test/*.ts", "tsdown.config.ts"]
 }

@@ -1,12 +1,13 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
+import { readFile, writeFile } from "node:fs/promises";
 import { dirname, extname, basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import packageJson from "../package.json";
-import { compileMarkdownEmail } from "./compiler";
-import type { Config } from "./config";
-import { loadConfig } from "./config-loader";
-import { countWarnings, formatDiagnostic, type Diagnostic } from "./diagnostics";
+import packageJson from "../package.json" with { type: "json" };
+import { compileMarkdownEmail } from "./compiler.ts";
+import type { Config } from "./config.ts";
+import { loadConfig, type LoadConfigOptions } from "./config-loader.ts";
+import { countWarnings, formatDiagnostic, type Diagnostic } from "./diagnostics.ts";
 
 const helpText = `Usage: mdtoemail [options] <input.md>
 
@@ -62,13 +63,10 @@ async function main(): Promise<void> {
     throw new Error("Output path must be different from input path.");
   }
 
-  const config = applyCliOverrides(
-    await loadConfig({
-      ...(values.config ? { configPath: values.config } : {}),
-      ...(values.theme ? { theme: values.theme } : {}),
-    }),
-    values,
-  );
+  const loadOptions: LoadConfigOptions = {};
+  if (values.config) loadOptions.configPath = values.config;
+  if (values.theme) loadOptions.theme = values.theme;
+  const config = applyCliOverrides(await loadConfig(loadOptions), values);
   const markdown = await readInput(input);
   const compiled = await compileMarkdownEmail(markdown, { title: basename(input), config });
   printDiagnostics(compiled.diagnostics, config);
@@ -79,7 +77,7 @@ async function main(): Promise<void> {
   }
 
   try {
-    await Bun.write(output, compiled.html);
+    await writeFile(output, compiled.html, "utf8");
   } catch (error) {
     throw new Error(`Could not write output file "${output}". ${messageFrom(error)}`);
   }
@@ -110,13 +108,16 @@ export function deriveOutputPath(input: string): string {
 
 async function readInput(path: string): Promise<string> {
   try {
-    return await Bun.file(path).text();
+    return await readFile(path, "utf8");
   } catch (error) {
     throw new Error(`Could not read input file "${path}". ${messageFrom(error)}`);
   }
 }
 
-function applyCliOverrides(config: Config, values: ReturnType<typeof parseCliArgs>["values"]): Config {
+function applyCliOverrides(
+  config: Config,
+  values: ReturnType<typeof parseCliArgs>["values"],
+): Config {
   return {
     ...config,
     email: {

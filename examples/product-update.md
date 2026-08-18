@@ -37,12 +37,12 @@ h1_font_size = "34px"
 content_padding = "44px"
 ```
 
-| Feature | Default | Themed |
-|:--|:--|--:|
-| Markdown rendering | Yes | Yes |
-| Email-safe wrapper | Yes | Yes |
-| Theme token overrides | Basic | Custom |
-| Provider testing | Required | Required |
+| Feature               | Default  |   Themed |
+| :-------------------- | :------- | -------: |
+| Markdown rendering    | Yes      |      Yes |
+| Email-safe wrapper    | Yes      |      Yes |
+| Theme token overrides | Basic    |   Custom |
+| Provider testing      | Required | Required |
 
 > Tip: keep email styles boring on purpose. Inline, simple, and predictable usually wins.
 

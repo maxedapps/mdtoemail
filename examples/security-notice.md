@@ -6,12 +6,12 @@ We detected a sign-in from a new device.
 
 ## Sign-in details
 
-| Field | Value |
-|:--|:--|
-| Time | 2026-06-30 16:42 UTC |
-| Location | Berlin, Germany |
-| Device | Firefox on macOS |
-| IP range | `203.0.113.0/24` |
+| Field    | Value                |
+| :------- | :------------------- |
+| Time     | 2026-06-30 16:42 UTC |
+| Location | Berlin, Germany      |
+| Device   | Firefox on macOS     |
+| IP range | `203.0.113.0/24`     |
 
 [Review account activity](https://example.com/account/activity)
 
@@ -25,7 +25,7 @@ Raw HTML example that should be escaped by the converter:
 
 Unsafe link example that should produce a diagnostic and lose its href:
 
-[Do not click](javascript:alert(1))
+[Do not click](<javascript:alert(1)>)
 
 If you did not request this, reset your password and review active sessions.[^1]
 

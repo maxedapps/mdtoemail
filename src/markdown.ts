@@ -6,10 +6,10 @@ import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
-import type { Config } from "./config";
-import type { Diagnostic } from "./diagnostics";
-import { sanitizeEmailHast } from "./email";
-import { defaultCodeTokenizer, highlightCodeHast, type CodeTokenizer } from "./highlight";
+import type { Config } from "./config.ts";
+import type { Diagnostic } from "./diagnostics.ts";
+import { sanitizeEmailHast } from "./email.ts";
+import { defaultCodeTokenizer, highlightCodeHast, type CodeTokenizer } from "./highlight.ts";
 
 export interface Frontmatter {
   kind: string;
@@ -83,6 +83,9 @@ function extractFrontmatter(tree: MdastRoot): Frontmatter | null {
   return frontmatter;
 }
 
-function isFrontmatterNode(node: { type: string; value?: string }): node is Literal & { type: "yaml" | "toml" } {
+function isFrontmatterNode(node: {
+  type: string;
+  value?: string;
+}): node is Literal & { type: "yaml" | "toml" } {
   return node.type === "yaml" || node.type === "toml";
 }

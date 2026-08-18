@@ -1,7 +1,7 @@
 import type { Element, ElementContent, Root, RootContent, Text } from "hast";
-import type { Config } from "./config";
-import { addDiagnostic, addDiagnosticOnce, type Diagnostic } from "./diagnostics";
-import { displayColumns } from "./highlight";
+import type { Config } from "./config.ts";
+import { addDiagnostic, addDiagnosticOnce, type Diagnostic } from "./diagnostics.ts";
+import { displayColumns } from "./highlight.ts";
 
 const allowedElements = new Set([
   "p",
@@ -38,7 +38,11 @@ const allowedElements = new Set([
 const maxComfortableTableColumns = 6;
 const maxComfortableCodeLine = 80;
 
-export function sanitizeEmailHast(tree: Root, config: Config, diagnostics: Diagnostic[] = []): void {
+export function sanitizeEmailHast(
+  tree: Root,
+  config: Config,
+  diagnostics: Diagnostic[] = [],
+): void {
   transformChildren(tree, config, diagnostics);
 }
 
@@ -123,7 +127,7 @@ type UrlDecision =
 interface ElementMutationContext {
   removed: boolean;
   replaced: boolean;
-  setProperty(node: Element, key: string, value: unknown): void;
+  setProperty(node: Element, key: string, value: Element["properties"][string] | undefined): void;
   removeNode(node: Readonly<Element>): void;
   replaceNode(node: Readonly<Element>, newNode: Element | Text): void;
 }
@@ -140,7 +144,10 @@ type HastChild = RootContent | ElementContent | RawNode;
 function transformChildren(parent: HastParent, config: Config, diagnostics: Diagnostic[]): void {
   let index = 0;
   while (index < parent.children.length) {
-    const action = transformChild(parent.children[index] as HastChild, parent, index, config, diagnostics);
+    // SAFETY: unified may add raw nodes to this HAST child list; transformChild checks that
+    // explicit extension before handling the standard RootContent and ElementContent variants.
+    const child = parent.children[index] as HastChild;
+    const action = transformChild(child, parent, index, config, diagnostics);
     if (action === "removed") continue;
     index += 1;
   }
@@ -177,9 +184,13 @@ function transformChild(
       reportOnce(diagnostics, line, {
         code: "task-list-input-transformed",
         severity: "info",
-        message: "Converted task-list checkbox inputs to plain text symbols for email compatibility.",
+        message:
+          "Converted task-list checkbox inputs to plain text symbols for email compatibility.",
       });
-      parent.children[index] = { type: "text", value: isCheckedCheckbox(node.properties) ? "☑ " : "☐ " };
+      parent.children[index] = {
+        type: "text",
+        value: isCheckedCheckbox(node.properties) ? "☑ " : "☐ ",
+      };
       return "replaced";
     }
 
@@ -231,7 +242,7 @@ function mutationContext(parent: HastParent, index: number): ElementMutationCont
         delete node.properties[key];
         return;
       }
-      node.properties[key] = value as Element["properties"][string];
+      node.properties[key] = value;
     },
     removeNode() {
       parent.children.splice(index, 1);
@@ -245,10 +256,18 @@ function mutationContext(parent: HastParent, index: number): ElementMutationCont
 }
 
 function copyFencedCodeData(node: Element): void {
-  const data = { ...(node.data as Record<string, unknown> | undefined) };
-  if (typeof data.lang !== "string" || data.lang.length === 0) {
+  const data = { ...node.data };
+  const currentLanguage = "lang" in data ? data.lang : undefined;
+  if (typeof currentLanguage !== "string" || currentLanguage.length === 0) {
     const language = languageFromClassName(node.properties.className);
-    if (language) data.lang = language;
+    if (language) {
+      Object.defineProperty(data, "lang", {
+        value: language,
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+    }
   }
   node.data = data;
 }
@@ -256,7 +275,11 @@ function copyFencedCodeData(node: Element): void {
 function languageFromClassName(value: unknown): string | undefined {
   const names = Array.isArray(value) ? value : typeof value === "string" ? value.split(/\s+/) : [];
   for (const name of names) {
-    if (typeof name === "string" && name.startsWith("language-") && name.length > "language-".length) {
+    if (
+      typeof name === "string" &&
+      name.startsWith("language-") &&
+      name.length > "language-".length
+    ) {
       return name.slice("language-".length);
     }
   }
@@ -410,7 +433,11 @@ function replaceSectionWithDiv(
   });
 }
 
-function addDecisionDiagnostic(diagnostics: Diagnostic[], decision: UrlDecision, line: number | undefined): void {
+function addDecisionDiagnostic(
+  diagnostics: Diagnostic[],
+  decision: UrlDecision,
+  line: number | undefined,
+): void {
   if (!decision.diagnostic) return;
   report(diagnostics, line, decision.diagnostic);
 }
@@ -419,7 +446,11 @@ function report(diagnostics: Diagnostic[], line: number | undefined, diagnostic:
   addDiagnostic(diagnostics, line === undefined ? diagnostic : { ...diagnostic, line });
 }
 
-function reportOnce(diagnostics: Diagnostic[], line: number | undefined, diagnostic: Diagnostic): void {
+function reportOnce(
+  diagnostics: Diagnostic[],
+  line: number | undefined,
+  diagnostic: Diagnostic,
+): void {
   addDiagnosticOnce(diagnostics, line === undefined ? diagnostic : { ...diagnostic, line });
 }
 
@@ -477,12 +508,20 @@ function decideLinkUrl(value: unknown): UrlDecision | undefined {
 function decideImageUrl(value: unknown, alt: unknown): UrlDecision {
   const fallbackText = imageFallbackText(alt);
   if (typeof value !== "string") {
-    return removeImage("unsafe-image-url", "Removed image without a valid source URL.", fallbackText);
+    return removeImage(
+      "unsafe-image-url",
+      "Removed image without a valid source URL.",
+      fallbackText,
+    );
   }
 
   const trimmed = value.trim();
   if (!isNonEmptySafeUrlText(trimmed) || trimmed.startsWith("//")) {
-    return removeImage("unsafe-image-url", `Removed image with unsafe URL ${JSON.stringify(trimmed)}.`, fallbackText);
+    return removeImage(
+      "unsafe-image-url",
+      `Removed image with unsafe URL ${JSON.stringify(trimmed)}.`,
+      fallbackText,
+    );
   }
 
   if (trimmed.startsWith("#") || isRelativeUrl(trimmed)) {
@@ -505,7 +544,11 @@ function decideImageUrl(value: unknown, alt: unknown): UrlDecision {
     );
   }
 
-  return removeImage("unsafe-image-url", `Removed image with unsafe URL ${JSON.stringify(trimmed)}.`, fallbackText);
+  return removeImage(
+    "unsafe-image-url",
+    `Removed image with unsafe URL ${JSON.stringify(trimmed)}.`,
+    fallbackText,
+  );
 }
 
 function removeUrl(code: "unsafe-link-url", message: string): UrlDecision {
@@ -517,7 +560,10 @@ function removeImage(
   message: string,
   fallbackText: string | undefined,
 ): UrlDecision {
-  const decision: UrlDecision = { action: "remove", diagnostic: { code, severity: "warning", message } };
+  const decision: UrlDecision = {
+    action: "remove",
+    diagnostic: { code, severity: "warning", message },
+  };
   if (fallbackText) {
     decision.fallbackText = fallbackText;
   }
@@ -525,11 +571,24 @@ function removeImage(
 }
 
 function isNonEmptySafeUrlText(value: string): boolean {
-  return Boolean(value) && !/[\u0000-\u001f\u007f]/.test(value) && !/\s/.test(value);
+  return Boolean(value) && !hasAsciiControlCharacter(value) && !/\s/.test(value);
+}
+
+function hasAsciiControlCharacter(value: string): boolean {
+  for (const character of value) {
+    const code = character.charCodeAt(0);
+    if (code <= 0x1f || code === 0x7f) return true;
+  }
+  return false;
 }
 
 function isRelativeUrl(value: string): boolean {
-  return value.startsWith("/") || value.startsWith("./") || value.startsWith("../") || !/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(value);
+  return (
+    value.startsWith("/") ||
+    value.startsWith("./") ||
+    value.startsWith("../") ||
+    !/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(value)
+  );
 }
 
 function protocolOf(value: string): string | undefined {
@@ -611,18 +670,22 @@ function isCheckbox(properties: Record<string, unknown>): boolean {
 }
 
 function isCheckedCheckbox(properties: Record<string, unknown>): boolean {
-  return properties.checked === true || properties.checked === "" || properties.checked === "checked";
+  return (
+    properties.checked === true || properties.checked === "" || properties.checked === "checked"
+  );
 }
 
 function isSafeId(value: string): boolean {
-  return /^[A-Za-z][A-Za-z0-9_:.\-]*$/.test(value);
+  return /^[A-Za-z][A-Za-z0-9_:.-]*$/.test(value);
 }
 
 function isScreenReaderOnly(value: unknown): boolean {
   return Array.isArray(value) ? value.includes("sr-only") : value === "sr-only";
 }
 
-function textAlignFromProperties(properties: Record<string, unknown>): "left" | "right" | "center" | undefined {
+function textAlignFromProperties(
+  properties: Record<string, unknown>,
+): "left" | "right" | "center" | undefined {
   const fromStyle = textAlignFromStyle(properties.style);
   if (fromStyle) return fromStyle;
 
@@ -634,28 +697,68 @@ function textAlignFromStyle(value: unknown): "left" | "right" | "center" | undef
   if (typeof value !== "string") return undefined;
 
   const match = /(?:^|;)\s*text-align\s*:\s*(left|right|center)\s*(?:;|$)/i.exec(value);
-  return match?.[1]?.toLowerCase() as "left" | "right" | "center" | undefined;
+  const align = match?.[1]?.toLowerCase();
+  return align === "left" || align === "right" || align === "center" ? align : undefined;
 }
 
-function styleForElement(tagName: string, config: Config, textAlign?: string, screenReaderOnly = false): string | undefined {
+function styleForElement(
+  tagName: string,
+  config: Config,
+  textAlign?: string,
+  screenReaderOnly = false,
+): string | undefined {
   const { theme } = config;
 
   switch (tagName) {
     case "p":
-      return rawStyleAttribute({ margin: theme.paragraphMargin, color: theme.textColor, "line-height": theme.lineHeight });
+      return rawStyleAttribute({
+        margin: theme.paragraphMargin,
+        color: theme.textColor,
+        "line-height": theme.lineHeight,
+      });
     case "h1":
-      return rawStyleAttribute({ margin: theme.h1Margin, color: theme.headingColor, "font-size": theme.h1FontSize, "line-height": theme.h1LineHeight, "font-weight": "700" });
+      return rawStyleAttribute({
+        margin: theme.h1Margin,
+        color: theme.headingColor,
+        "font-size": theme.h1FontSize,
+        "line-height": theme.h1LineHeight,
+        "font-weight": "700",
+      });
     case "h2":
       if (screenReaderOnly) {
-        return rawStyleAttribute({ margin: theme.paragraphMargin, color: theme.mutedTextColor, "font-size": theme.smallFontSize, "line-height": theme.lineHeight, "font-weight": "700" });
+        return rawStyleAttribute({
+          margin: theme.paragraphMargin,
+          color: theme.mutedTextColor,
+          "font-size": theme.smallFontSize,
+          "line-height": theme.lineHeight,
+          "font-weight": "700",
+        });
       }
-      return rawStyleAttribute({ margin: theme.h2Margin, color: theme.headingColor, "font-size": theme.h2FontSize, "line-height": theme.h2LineHeight, "font-weight": "700" });
+      return rawStyleAttribute({
+        margin: theme.h2Margin,
+        color: theme.headingColor,
+        "font-size": theme.h2FontSize,
+        "line-height": theme.h2LineHeight,
+        "font-weight": "700",
+      });
     case "h3":
-      return rawStyleAttribute({ margin: theme.h3Margin, color: theme.headingColor, "font-size": theme.h3FontSize, "line-height": theme.h3LineHeight, "font-weight": "700" });
+      return rawStyleAttribute({
+        margin: theme.h3Margin,
+        color: theme.headingColor,
+        "font-size": theme.h3FontSize,
+        "line-height": theme.h3LineHeight,
+        "font-weight": "700",
+      });
     case "h4":
     case "h5":
     case "h6":
-      return rawStyleAttribute({ margin: theme.minorHeadingMargin, color: theme.headingColor, "font-size": theme.minorHeadingFontSize, "line-height": theme.minorHeadingLineHeight, "font-weight": "700" });
+      return rawStyleAttribute({
+        margin: theme.minorHeadingMargin,
+        color: theme.headingColor,
+        "font-size": theme.minorHeadingFontSize,
+        "line-height": theme.minorHeadingLineHeight,
+        "font-weight": "700",
+      });
     case "a":
       return rawStyleAttribute({ color: theme.linkColor, "text-decoration": "underline" });
     case "ul":
@@ -664,21 +767,71 @@ function styleForElement(tagName: string, config: Config, textAlign?: string, sc
     case "li":
       return rawStyleAttribute({ margin: theme.listItemMargin });
     case "blockquote":
-      return rawStyleAttribute({ margin: theme.blockquoteMargin, padding: theme.blockquotePadding, borderLeft: `4px solid ${theme.blockquoteBorderColor}`, color: theme.textColor });
+      return rawStyleAttribute({
+        margin: theme.blockquoteMargin,
+        padding: theme.blockquotePadding,
+        borderLeft: `4px solid ${theme.blockquoteBorderColor}`,
+        color: theme.textColor,
+      });
     case "code":
-      return rawStyleAttribute({ background: theme.codeBackground, padding: theme.codePadding, "font-family": theme.codeFontFamily, "font-size": theme.codeFontSize });
+      return rawStyleAttribute({
+        background: theme.codeBackground,
+        padding: theme.codePadding,
+        "font-family": theme.codeFontFamily,
+        "font-size": theme.codeFontSize,
+      });
     case "pre":
-      return rawStyleAttribute({ margin: theme.preMargin, padding: theme.prePadding, background: theme.codeBackground, "white-space": "pre-wrap", "overflow-wrap": "break-word", "font-family": theme.codeFontFamily, "font-size": theme.preFontSize, "line-height": theme.preLineHeight });
+      return rawStyleAttribute({
+        margin: theme.preMargin,
+        padding: theme.prePadding,
+        background: theme.codeBackground,
+        "white-space": "pre-wrap",
+        "overflow-wrap": "break-word",
+        "font-family": theme.codeFontFamily,
+        "font-size": theme.preFontSize,
+        "line-height": theme.preLineHeight,
+      });
     case "hr":
-      return rawStyleAttribute({ border: "0", "border-top": `1px solid ${theme.borderColor}`, margin: theme.hrMargin });
+      return rawStyleAttribute({
+        border: "0",
+        "border-top": `1px solid ${theme.borderColor}`,
+        margin: theme.hrMargin,
+      });
     case "img":
-      return rawStyleAttribute({ display: "block", "max-width": "100%", height: "auto", border: "0", outline: "none", "text-decoration": "none", "-ms-interpolation-mode": "bicubic", margin: theme.imageMargin });
+      return rawStyleAttribute({
+        display: "block",
+        "max-width": "100%",
+        height: "auto",
+        border: "0",
+        outline: "none",
+        "text-decoration": "none",
+        "-ms-interpolation-mode": "bicubic",
+        margin: theme.imageMargin,
+      });
     case "table":
-      return rawStyleAttribute({ width: "100%", "border-collapse": "collapse", "mso-table-lspace": "0pt", "mso-table-rspace": "0pt", margin: theme.tableMargin });
+      return rawStyleAttribute({
+        width: "100%",
+        "border-collapse": "collapse",
+        "mso-table-lspace": "0pt",
+        "mso-table-rspace": "0pt",
+        margin: theme.tableMargin,
+      });
     case "th":
-      return rawStyleAttribute({ border: `1px solid ${theme.borderColor}`, padding: theme.tableCellPadding, background: theme.tableHeaderBackground, color: theme.textColor, "font-weight": "700", "text-align": textAlign });
+      return rawStyleAttribute({
+        border: `1px solid ${theme.borderColor}`,
+        padding: theme.tableCellPadding,
+        background: theme.tableHeaderBackground,
+        color: theme.textColor,
+        "font-weight": "700",
+        "text-align": textAlign,
+      });
     case "td":
-      return rawStyleAttribute({ border: `1px solid ${theme.borderColor}`, padding: theme.tableCellPadding, color: theme.textColor, "text-align": textAlign });
+      return rawStyleAttribute({
+        border: `1px solid ${theme.borderColor}`,
+        padding: theme.tableCellPadding,
+        color: theme.textColor,
+        "text-align": textAlign,
+      });
     default:
       return undefined;
   }

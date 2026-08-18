@@ -1,12 +1,19 @@
-import { afterEach, describe, expect, test } from "bun:test";
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { afterEach, describe, expect, test } from "vitest";
+import { spawnSync } from "node:child_process";
+import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
-import { compileMarkdownEmail } from "../src/compiler";
-import { loadConfig } from "../src/config-loader";
+import { compileMarkdownEmail } from "../src/compiler.ts";
+import { loadConfig } from "../src/config-loader.ts";
 
 const tempDirs: string[] = [];
-const textDecoder = new TextDecoder();
+const cliPath = join(process.cwd(), "src/cli.ts");
+
+interface CliResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+}
 
 afterEach(async () => {
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
@@ -113,7 +120,9 @@ describe("CLI", () => {
   });
 
   test("strict highlighted conversion fails before writing for invalid metadata", async () => {
-    const { dir, input, output } = await writeInput("```ts {1-999999999} lineNumbers\nconst x = 1;\n```");
+    const { dir, input, output } = await writeInput(
+      "```ts {1-999999999} lineNumbers\nconst x = 1;\n```",
+    );
     const config = join(dir, "mdtoemail.toml");
     await writeFile(config, "[markdown]\nsyntax_highlighting = true\n[email]\nstrict = true\n");
 
@@ -137,7 +146,9 @@ describe("CLI", () => {
   });
 
   test("strict mode renders the fixed dark highlighting profile", async () => {
-    const { dir, input, output } = await writeInput("```ts {1} lineNumbers\nconst x: number = 1;\n```");
+    const { dir, input, output } = await writeInput(
+      "```ts {1} lineNumbers\nconst x: number = 1;\n```",
+    );
     const config = join(dir, "mdtoemail.toml");
     await writeFile(
       config,
@@ -168,7 +179,9 @@ describe("CLI", () => {
   });
 
   test("strict mode succeeds for info-only diagnostics", async () => {
-    const { input, output } = await writeInput("- [x] Done\n\n![](https://example.com/a.png)\n\n[rel](/pricing)");
+    const { input, output } = await writeInput(
+      "- [x] Done\n\n![](https://example.com/a.png)\n\n[rel](/pricing)",
+    );
 
     const result = runCli(input, "--strict", "-o", output);
 
@@ -214,7 +227,7 @@ describe("CLI", () => {
   test("--theme path applies a TOML theme", async () => {
     const { dir, input, output } = await writeInput("# Hello");
     const theme = join(dir, "theme.toml");
-    await writeFile(theme, "[theme]\nheading_color = \"#123456\"\nh1_font_size = \"31px\"\n");
+    await writeFile(theme, '[theme]\nheading_color = "#123456"\nh1_font_size = "31px"\n');
 
     const result = runCli(input, "--theme", theme, "-o", output);
 
@@ -226,9 +239,9 @@ describe("CLI", () => {
     const { dir, input, output } = await writeInput("# Hello");
     const config = join(dir, "mdtoemail.toml");
     await mkdir(join(dir, "themes"));
-    await writeFile(config, "[theme]\nextends = \"newsletter\"\n");
-    await writeFile(join(dir, "themes", "newsletter.toml"), "[theme]\nheading_color = \"#f59e0b\"\n");
-    await writeFile(join(dir, "themes", "minimal.toml"), "[theme]\nheading_color = \"#111111\"\n");
+    await writeFile(config, '[theme]\nextends = "newsletter"\n');
+    await writeFile(join(dir, "themes", "newsletter.toml"), '[theme]\nheading_color = "#f59e0b"\n');
+    await writeFile(join(dir, "themes", "minimal.toml"), '[theme]\nheading_color = "#111111"\n');
 
     const result = runCli(input, "--config", config, "--theme", "minimal", "-o", output);
 
@@ -260,27 +273,106 @@ describe("CLI", () => {
     expect(stderr(result)).toContain(join(dir, "themes", "missing.toml"));
     await expectFileMissing(output);
   });
+
+  test("fails cleanly when the input is missing", async () => {
+    const dir = await makeTempDir();
+
+    const result = runCli({ cwd: dir });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(stderr(result)).toContain("Missing input file.");
+    expect(await readdir(dir)).toEqual([]);
+  });
+
+  test("fails cleanly for extra input arguments", async () => {
+    const dir = await makeTempDir();
+    await writeFile(join(dir, "one.md"), "one");
+    await writeFile(join(dir, "two.md"), "two");
+
+    const result = runCli("one.md", "two.md", { cwd: dir });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(stderr(result)).toContain("Expected one input file.");
+    expect(await readdir(dir)).toEqual(["one.md", "two.md"]);
+  });
+
+  test("prefixes input read failures and does not write output", async () => {
+    const dir = await makeTempDir();
+
+    const result = runCli("missing.md", { cwd: dir });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(stderr(result)).toContain('Could not read input file "missing.md".');
+    await expectFileMissing(join(dir, "missing.html"));
+  });
+
+  test("prefixes output write failures", async () => {
+    const dir = await makeTempDir();
+    await writeFile(join(dir, "input.md"), "# Hello");
+    await mkdir(join(dir, "output.html"));
+
+    const result = runCli("input.md", "--output", "output.html", { cwd: dir });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(stderr(result)).toContain('Could not write output file "output.html".');
+    expect(await readdir(join(dir, "output.html"))).toEqual([]);
+  });
+
+  test("rejects equal input and output paths without modifying the input", async () => {
+    const dir = await makeTempDir();
+    const input = join(dir, "input.md");
+    await writeFile(input, "# Original");
+
+    const result = runCli(input, "--output", input, { cwd: dir });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(stderr(result)).toContain("Output path must be different from input path.");
+    expect(await readFile(input, "utf8")).toBe("# Original");
+  });
+
+  test("derives and writes the default output when --output is omitted", async () => {
+    const dir = await makeTempDir();
+    await writeFile(join(dir, "welcome.md"), "# Welcome");
+
+    const result = runCli("welcome.md", { cwd: dir });
+
+    expect(result.exitCode).toBe(0);
+    expect(stdout(result)).toContain("Wrote welcome.html");
+    expect(await readFile(join(dir, "welcome.html"), "utf8")).toContain(">Welcome</h1>");
+  });
 });
 
-function runCli(...args: [...string[], { cwd: string }] | string[]): ReturnType<typeof Bun.spawnSync> {
-  const options = typeof args.at(-1) === "object" ? (args.pop() as { cwd: string }) : undefined;
-  return Bun.spawnSync({
-    cmd: ["bun", "run", join(process.cwd(), "src/cli.ts"), ...(args as string[])],
-    ...(options ? { cwd: options.cwd } : {}),
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+function runCli(...args: (string | { cwd: string })[]): CliResult {
+  const cliArgs: string[] = [];
+  let options: { cwd: string } | undefined;
+  for (const argument of args) {
+    if (typeof argument === "string") cliArgs.push(argument);
+    else options = argument;
+  }
+
+  const commandArgs = [cliPath, ...cliArgs];
+  const result = options
+    ? spawnSync(process.execPath, commandArgs, { cwd: options.cwd, encoding: "utf8" })
+    : spawnSync(process.execPath, commandArgs, { encoding: "utf8" });
+  if (result.error) throw result.error;
+  return {
+    exitCode: result.status ?? 1,
+    stdout: result.stdout,
+    stderr: result.stderr,
+  };
 }
 
-function stdout(result: ReturnType<typeof Bun.spawnSync>): string {
-  return textDecoder.decode(result.stdout);
+function stdout(result: CliResult): string {
+  return result.stdout;
 }
 
-function stderr(result: ReturnType<typeof Bun.spawnSync>): string {
-  return textDecoder.decode(result.stderr);
+function stderr(result: CliResult): string {
+  return result.stderr;
 }
 
-async function writeInput(markdown: string): Promise<{ dir: string; input: string; output: string }> {
+async function writeInput(
+  markdown: string,
+): Promise<{ dir: string; input: string; output: string }> {
   const dir = await makeTempDir();
   const input = join(dir, "input.md");
   const output = join(dir, "output.html");
@@ -289,7 +381,7 @@ async function writeInput(markdown: string): Promise<{ dir: string; input: strin
 }
 
 async function expectFileExists(path: string): Promise<void> {
-  await expect(access(path)).resolves.toBeNull();
+  await expect(access(path)).resolves.toBeUndefined();
 }
 
 async function expectFileMissing(path: string): Promise<void> {

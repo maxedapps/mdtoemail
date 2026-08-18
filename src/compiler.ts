@@ -1,7 +1,7 @@
-import { cloneConfig, defaultConfig, validateResolvedConfig, type Config } from "./config";
-import { addFinalHtmlSizeDiagnostic, type Diagnostic } from "./diagnostics";
-import { renderEmailDocument } from "./email";
-import { renderMarkdown } from "./markdown";
+import { cloneConfig, defaultConfig, validateResolvedConfig, type Config } from "./config.ts";
+import { addFinalHtmlSizeDiagnostic, type Diagnostic } from "./diagnostics.ts";
+import { renderEmailDocument } from "./email.ts";
+import { renderMarkdown } from "./markdown.ts";
 
 export interface Frontmatter {
   kind: string;
@@ -23,7 +23,10 @@ export async function compileMarkdownEmail(
   markdown: string,
   options: CompileMarkdownEmailOptions = {},
 ): Promise<CompiledMarkdownEmail> {
-  const config = options.config === undefined ? cloneConfig(defaultConfig) : validateResolvedConfig(options.config);
+  const config =
+    options.config === undefined
+      ? cloneConfig(defaultConfig)
+      : validateResolvedConfig(options.config);
   const rendered = await renderMarkdown(markdown, config);
   const html = renderEmailDocument(rendered.html, options.title ?? "", config);
   addFinalHtmlSizeDiagnostic(html, rendered.diagnostics);

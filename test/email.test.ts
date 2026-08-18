@@ -1,6 +1,6 @@
-import { describe, expect, test } from "bun:test";
-import { defaultConfig } from "../src/config";
-import { isAllowedUrl, renderEmailDocument } from "../src/email";
+import { describe, expect, test } from "vitest";
+import { defaultConfig } from "../src/config.ts";
+import { isAllowedUrl, renderEmailDocument } from "../src/email.ts";
 
 describe("isAllowedUrl", () => {
   test("allows safe link URLs", () => {

@@ -1,7 +1,7 @@
 import { createHighlighterCore } from "@shikijs/core";
 import type { Element, ElementContent, Root } from "hast";
-import type { Config, SyntaxHighlightingMode } from "./config";
-import { addDiagnostic, type Diagnostic } from "./diagnostics";
+import type { Config, SyntaxHighlightingMode } from "./config.ts";
+import { addDiagnostic, type Diagnostic } from "./diagnostics.ts";
 import { createJavaScriptRegexEngine } from "@shikijs/engine-javascript";
 import bash from "@shikijs/langs/bash";
 import css from "@shikijs/langs/css";
@@ -47,18 +47,19 @@ export const EMAIL_CODE_PROFILE: EmailCodeProfile = Object.freeze({
   lineHeight: "20px",
 });
 
-export const EMAIL_CODE_PROFILES: Readonly<Record<SyntaxHighlightingMode, EmailCodeProfile>> = Object.freeze({
-  light: EMAIL_CODE_PROFILE,
-  dark: Object.freeze({
-    background: "#0d1117",
-    foreground: "#e6edf3",
-    highlightBackground: "#3b3424",
-    lineNumber: "#8b949e",
-    fontFamily: '"Courier New", Courier, monospace',
-    fontSize: "14px",
-    lineHeight: "20px",
-  }),
-});
+export const EMAIL_CODE_PROFILES: Readonly<Record<SyntaxHighlightingMode, EmailCodeProfile>> =
+  Object.freeze({
+    light: EMAIL_CODE_PROFILE,
+    dark: Object.freeze({
+      background: "#0d1117",
+      foreground: "#e6edf3",
+      highlightBackground: "#3b3424",
+      lineNumber: "#8b949e",
+      fontFamily: '"Courier New", Courier, monospace',
+      fontSize: "14px",
+      lineHeight: "20px",
+    }),
+  });
 
 export const SUPPORTED_CODE_LANGUAGES = [
   "bash",
@@ -143,7 +144,11 @@ export function resolveCodeLanguage(language: string | undefined): CodeLanguage 
 }
 
 export const defaultCodeTokenizer: CodeTokenizer = Object.freeze({
-  async tokenize(code: string, language: SupportedCodeLanguage, mode: SyntaxHighlightingMode = "light") {
+  async tokenize(
+    code: string,
+    language: SupportedCodeLanguage,
+    mode: SyntaxHighlightingMode = "light",
+  ) {
     if (!supportedLanguageSet.has(language)) {
       throw new Error(`Unsupported code language: ${language}`);
     }
@@ -193,7 +198,7 @@ export function parseCodeMeta(meta: string | undefined, lineCount: number): Pars
   return { highlightedLines, lineNumbers };
 }
 
-export function displayColumns(line: string, tabWidth = DEFAULT_TAB_WIDTH): number {
+export function displayColumns(line: string, tabWidth: number = DEFAULT_TAB_WIDTH): number {
   assertTabWidth(tabWidth);
 
   let columns = 0;
@@ -209,7 +214,7 @@ export function displayColumns(line: string, tabWidth = DEFAULT_TAB_WIDTH): numb
 
 export function toEmailDisplayTokens(
   tokens: readonly HighlightToken[],
-  tabWidth = DEFAULT_TAB_WIDTH,
+  tabWidth: number = DEFAULT_TAB_WIDTH,
 ): readonly HighlightToken[] {
   assertTabWidth(tabWidth);
 
@@ -235,7 +240,8 @@ export function toEmailDisplayTokens(
 
   const flushSpaces = (trailing: boolean): void => {
     for (let index = 0; index < pendingSpaces.length; index += 1) {
-      const isNormalInternalSpace = hasVisibleContent && !trailing && index === pendingSpaces.length - 1;
+      const isNormalInternalSpace =
+        hasVisibleContent && !trailing && index === pendingSpaces.length - 1;
       append(isNormalInternalSpace ? " " : "\u00a0", pendingSpaces[index]!);
     }
     pendingSpaces.length = 0;
@@ -364,7 +370,11 @@ async function highlightPre(
 
   let highlighted: HighlightedCode;
   try {
-    highlighted = await tokenizer.tokenize(source, language, config.markdown.syntaxHighlightingMode);
+    highlighted = await tokenizer.tokenize(
+      source,
+      language,
+      config.markdown.syntaxHighlightingMode,
+    );
   } catch {
     reportCodeDiagnostic(diagnostics, pre, {
       code: "code-highlighting-failed",
@@ -407,7 +417,8 @@ interface CanonicalCodeBlock {
 function canonicalCodeBlock(pre: Readonly<Element>): CanonicalCodeBlock | undefined {
   if (pre.children.length !== 1) return undefined;
   const code = pre.children[0];
-  if (code?.type !== "element" || code.tagName !== "code" || code.children.length !== 1) return undefined;
+  if (code?.type !== "element" || code.tagName !== "code" || code.children.length !== 1)
+    return undefined;
   const codeText = code.children[0];
   return codeText?.type === "text" ? { code, text: codeText } : undefined;
 }
@@ -422,12 +433,12 @@ function claimedCodeLanguage(pre: Readonly<Element>): string | undefined {
 }
 
 function languageFrom(code: Readonly<Element>): string | undefined {
-  const language = (code.data as Record<string, unknown> | undefined)?.lang;
+  const language = code.data && "lang" in code.data ? code.data.lang : undefined;
   return typeof language === "string" && language.length > 0 ? language : undefined;
 }
 
 function metaFrom(code: Readonly<Element>): string | undefined {
-  const meta = (code.data as Record<string, unknown> | undefined)?.meta;
+  const meta = code.data?.meta;
   return typeof meta === "string" ? meta : undefined;
 }
 
@@ -440,16 +451,15 @@ function reportCodeDiagnostic(
   addDiagnostic(diagnostics, line === undefined ? diagnostic : { ...diagnostic, line });
 }
 
-type HighlightValidation =
-  | { ok: true; tokenCount: number }
-  | { ok: false };
+type HighlightValidation = { ok: true; tokenCount: number } | { ok: false };
 
 function validateHighlightedSource(
   highlighted: HighlightedCode,
   source: string,
   sourceLines: readonly string[],
 ): HighlightValidation {
-  if (!Array.isArray(highlighted) || highlighted.length !== sourceLines.length) return { ok: false };
+  if (!Array.isArray(highlighted) || highlighted.length !== sourceLines.length)
+    return { ok: false };
 
   let tokenCount = 0;
   const reconstructedLines: string[] = [];
@@ -470,9 +480,7 @@ function validateHighlightedSource(
     reconstructedLines.push(reconstructed);
   }
 
-  return reconstructedLines.join("\n") === source
-    ? { ok: true, tokenCount }
-    : { ok: false };
+  return reconstructedLines.join("\n") === source ? { ok: true, tokenCount } : { ok: false };
 }
 
 function renderHighlightedCode(
@@ -532,67 +540,85 @@ function renderCodeLine(
   const background = highlightedLine ? profile.highlightBackground : profile.background;
   const normalizedTokens = sourceTokens.map(normalizeRenderableToken);
   const displayedTokens = toEmailDisplayTokens(normalizedTokens);
-  const codeChildren: ElementContent[] = displayedTokens.length === 0
-    ? [element("br", {}, [])]
-    : displayedTokens.map((token) => renderToken(token, profile));
+  const codeChildren: ElementContent[] =
+    displayedTokens.length === 0
+      ? [element("br", {}, [])]
+      : displayedTokens.map((token) => renderToken(token, profile));
   const cells: Element[] = [];
 
   if (metadata.lineNumbers) {
-    cells.push(element("td", {
-      ariaHidden: "true",
-      align: "right",
-      vAlign: "top",
-      width: "40",
-      bgColor: background,
-      style: style({
-        width: "40px",
-        padding: "0 8px 0 0",
-        "font-family": profile.fontFamily,
-        "font-size": profile.fontSize,
-        "line-height": profile.lineHeight,
-        "mso-line-height-rule": "exactly",
-        color: profile.lineNumber,
-        "background-color": background,
-      }),
-    }, [text(String(lineNumber))]));
+    cells.push(
+      element(
+        "td",
+        {
+          ariaHidden: "true",
+          align: "right",
+          vAlign: "top",
+          width: "40",
+          bgColor: background,
+          style: style({
+            width: "40px",
+            padding: "0 8px 0 0",
+            "font-family": profile.fontFamily,
+            "font-size": profile.fontSize,
+            "line-height": profile.lineHeight,
+            "mso-line-height-rule": "exactly",
+            color: profile.lineNumber,
+            "background-color": background,
+          }),
+        },
+        [text(String(lineNumber))],
+      ),
+    );
   }
 
-  cells.push(element("td", {
-    vAlign: "top",
-    bgColor: background,
-    style: style({
-      padding: "0",
-      "font-family": profile.fontFamily,
-      "font-size": profile.fontSize,
-      "line-height": profile.lineHeight,
-      "mso-line-height-rule": "exactly",
-      color: profile.foreground,
-      "background-color": background,
-    }),
-  }, [
-    element("code", {
-      style: style({
-        "font-family": profile.fontFamily,
-        "font-size": profile.fontSize,
-        "line-height": profile.lineHeight,
-        "mso-line-height-rule": "exactly",
-        color: profile.foreground,
-      }),
-    }, codeChildren),
-  ]));
+  cells.push(
+    element(
+      "td",
+      {
+        vAlign: "top",
+        bgColor: background,
+        style: style({
+          padding: "0",
+          "font-family": profile.fontFamily,
+          "font-size": profile.fontSize,
+          "line-height": profile.lineHeight,
+          "mso-line-height-rule": "exactly",
+          color: profile.foreground,
+          "background-color": background,
+        }),
+      },
+      [
+        element(
+          "code",
+          {
+            style: style({
+              "font-family": profile.fontFamily,
+              "font-size": profile.fontSize,
+              "line-height": profile.lineHeight,
+              "mso-line-height-rule": "exactly",
+              color: profile.foreground,
+            }),
+          },
+          codeChildren,
+        ),
+      ],
+    ),
+  );
 
   return element("tr", {}, cells);
 }
 
 function normalizeRenderableToken(token: HighlightToken): HighlightToken {
   const color = normalizeColor(token.color);
-  return {
+  const normalized: HighlightToken = {
     text: token.text,
-    ...(color ? { color } : {}),
     bold: token.bold === true,
     italic: token.italic === true,
     underline: token.underline === true,
   };
+  if (color) normalized.color = color;
+  return normalized;
 }
 
 function renderToken(token: HighlightToken, profile: EmailCodeProfile): ElementContent {
@@ -604,17 +630,21 @@ function renderToken(token: HighlightToken, profile: EmailCodeProfile): ElementC
     token.underline;
   if (!needsSpan) return text(token.text);
 
-  return element("span", {
-    style: style({
-      ...(color && color !== profile.foreground ? { color } : {}),
-      ...(token.bold ? { "font-weight": "700" } : {}),
-      ...(token.italic ? { "font-style": "italic" } : {}),
-      ...(token.underline ? { "text-decoration": "underline" } : {}),
-    }),
-  }, [text(token.text)]);
+  const tokenStyles = {
+    color: color && color !== profile.foreground ? color : undefined,
+    "font-weight": token.bold ? "700" : undefined,
+    "font-style": token.italic ? "italic" : undefined,
+    "text-decoration": token.underline ? "underline" : undefined,
+  };
+
+  return element("span", { style: style(tokenStyles) }, [text(token.text)]);
 }
 
-function element(tagName: string, properties: Element["properties"], children: ElementContent[]): Element {
+function element(
+  tagName: string,
+  properties: Element["properties"],
+  children: ElementContent[],
+): Element {
   return { type: "element", tagName, properties, children };
 }
 
@@ -622,38 +652,67 @@ function text(value: string): ElementContent {
   return { type: "text", value };
 }
 
-function style(properties: Readonly<Record<string, string>>): string {
-  return Object.entries(properties).map(([name, value]) => `${name}:${value}`).join(";");
+function style(properties: Readonly<Record<string, string | undefined>>): string {
+  return Object.entries(properties)
+    .filter((entry): entry is [string, string] => entry[1] !== undefined)
+    .map(([name, value]) => `${name}:${value}`)
+    .join(";");
 }
 
 async function getHighlighter(): Promise<Highlighter> {
   highlighterPromise ??= createHighlighterCore({
     themes: [githubLight, githubDarkDefault],
-    langs: [bash, css, diff, html, javascript, json, jsx, markdown, python, sql, toml, tsx, typescript, yaml],
+    langs: [
+      bash,
+      css,
+      diff,
+      html,
+      javascript,
+      json,
+      jsx,
+      markdown,
+      python,
+      sql,
+      toml,
+      tsx,
+      typescript,
+      yaml,
+    ],
     engine: createJavaScriptRegexEngine(),
   });
   return highlighterPromise;
 }
 
-function normalizeToken(token: { content: string; color?: string; fontStyle?: number }): HighlightToken {
+function normalizeToken(token: {
+  content: string;
+  color?: string;
+  fontStyle?: number;
+}): HighlightToken {
   const fontStyle = token.fontStyle !== undefined && token.fontStyle > 0 ? token.fontStyle : 0;
   const color = normalizeColor(token.color);
-  return {
+  const normalized: HighlightToken = {
     text: token.content,
-    ...(color ? { color } : {}),
     bold: (fontStyle & 2) !== 0,
     italic: (fontStyle & 1) !== 0,
     underline: (fontStyle & 4) !== 0,
   };
+  if (color) normalized.color = color;
+  return normalized;
 }
 
 function normalizeColor(color: string | undefined): string | undefined {
-  return typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color) ? color.toLowerCase() : undefined;
+  return typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color)
+    ? color.toLowerCase()
+    : undefined;
 }
 
-function parseHighlightRanges(expression: string, lineCount: number): readonly (readonly [number, number])[] | undefined {
+function parseHighlightRanges(
+  expression: string,
+  lineCount: number,
+): readonly (readonly [number, number])[] | undefined {
   if (!/^\{[^{}]*\}$/.test(expression)) return undefined;
-  if (!Number.isSafeInteger(lineCount) || lineCount < 0 || lineCount > MAX_CODE_LINES) return undefined;
+  if (!Number.isSafeInteger(lineCount) || lineCount < 0 || lineCount > MAX_CODE_LINES)
+    return undefined;
 
   const body = expression.slice(1, -1);
   if (!body) return undefined;
@@ -704,11 +763,12 @@ function equalTokenStyle(left: HighlightToken, right: HighlightToken): boolean {
 }
 
 function copyToken(token: HighlightToken, text: string): HighlightToken {
-  return {
+  const copy: HighlightToken = {
     text,
-    ...(token.color ? { color: token.color } : {}),
     bold: token.bold,
     italic: token.italic,
     underline: token.underline,
   };
+  if (token.color) copy.color = token.color;
+  return copy;
 }

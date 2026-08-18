@@ -43,11 +43,11 @@ content_padding = "42px"
 
 ### Token coverage
 
-| Token area | Example |
-|:--|:--|
-| Layout | `container_width`, `outer_padding`, `content_padding` |
-| Colors | `background_color`, `heading_color`, `link_color` |
-| Typography | `font_family`, `base_font_size`, `line_height` |
+| Token area | Example                                                            |
+| :--------- | :----------------------------------------------------------------- |
+| Layout     | `container_width`, `outer_padding`, `content_padding`              |
+| Colors     | `background_color`, `heading_color`, `link_color`                  |
+| Typography | `font_family`, `base_font_size`, `line_height`                     |
 | Components | `table_cell_padding`, `code_background`, `blockquote_border_color` |
 
 > Theme values are safe tokens, not arbitrary CSS. The renderer still controls which CSS properties are emitted.

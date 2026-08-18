@@ -4,25 +4,25 @@ Convert Markdown into standalone, email-friendly HTML with inline styles and a c
 
 ## Requirements
 
-- **CLI:** [Bun 1.3+](https://bun.sh/)
-- **Library:** portable JavaScript for Bun, Cloudflare Workers, and other standard JS runtimes
+- Node.js `>=22.18.0`
+- npm for installation and contributor workflows
+
+The CLI runs on Node.js. The ESM-only library entry is portable to Cloudflare Workers and is tested in a Worker without Node.js compatibility flags.
 
 ## CLI quick start
 
 Run without installing globally:
 
 ```bash
-bunx mdtoemail newsletter.md -o newsletter.html
+npx mdtoemail newsletter.md -o newsletter.html
 ```
 
 Or install globally:
 
 ```bash
-bun add --global mdtoemail
+npm install --global mdtoemail
 mdtoemail newsletter.md -o newsletter.html
 ```
-
-`npx mdtoemail ...` also works when Bun 1.3+ is installed and available on `PATH`; npx does not remove the Bun runtime requirement.
 
 If `--output` is omitted, `newsletter.md` becomes `newsletter.html`. Existing output files are overwritten.
 
@@ -41,13 +41,13 @@ If `--output` is omitted, `newsletter.md` becomes `newsletter.html`. Existing ou
 
 ## Library
 
-Install the package:
+Install the package locally:
 
 ```bash
-bun add mdtoemail
+npm install mdtoemail
 ```
 
-Compile a Markdown string:
+Import the ESM-only API and compile a Markdown string:
 
 ```ts
 import { compileMarkdownEmail } from "mdtoemail";
@@ -60,7 +60,7 @@ const { html, diagnostics, frontmatter } = await compileMarkdownEmail(
 
 `html` is a complete document. `diagnostics` contains warnings and informational messages. `frontmatter` is `{ kind, value }` or `null`.
 
-The library performs no file I/O, logging, config loading, or email delivery. Pass an optional resolved `config` object when needed.
+The library performs no file I/O, logging, config loading, or email delivery. Pass an optional resolved `config` object when needed. Its package entry does not depend on Node.js built-ins, so the same ESM import works in Cloudflare Workers without `nodejs_compat`.
 
 ## Configuration
 
@@ -95,13 +95,13 @@ See [`mdtoemail.example.toml`](./mdtoemail.example.toml) for every option and th
 Use a theme file directly:
 
 ```bash
-bunx mdtoemail input.md --theme ./themes/newsletter.toml -o email.html
+npx mdtoemail input.md --theme ./themes/newsletter.toml -o email.html
 ```
 
 Or resolve a named theme from `./themes/<name>.toml`:
 
 ```bash
-bunx mdtoemail input.md --theme newsletter -o email.html
+npx mdtoemail input.md --theme newsletter -o email.html
 ```
 
 A config can extend the same named theme:
@@ -156,12 +156,31 @@ More complete inputs and configs are available under [`examples/`](./examples/).
 
 ## Contributing
 
+Requires Node.js `>=22.18.0` and npm. Install exactly from the lockfile and run the complete fast gate:
+
 ```bash
-bun install
-bun test
-bun run typecheck
-bun run build
+npm ci
+npm run check
 ```
+
+Useful individual commands map directly to package scripts:
+
+```bash
+npm run dev -- input.md -o email.html
+npm run format:check
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+The package-level Node, types, CLI, and Cloudflare Worker validation is intentionally heavier:
+
+```bash
+npm run test:candidate
+```
+
+First-party code uses Oxfmt and type-aware Oxlint. The anti-slop policy keeps 11 measured rules blocking; four boundary-incompatible rules are deliberately disabled. Vendored plugin source under `tools/oxlint/anti-slop/` is excluded from local formatting and remediation; see its provenance notice before updating it.
 
 ## License
 

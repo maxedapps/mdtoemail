@@ -1,5 +1,13 @@
+import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import { cloneConfig, defaultConfig, mergeConfig, mergeThemeConfig, type Config } from "./config";
+import { parse } from "smol-toml";
+import {
+  cloneConfig,
+  defaultConfig,
+  mergeConfig,
+  mergeThemeConfig,
+  type Config,
+} from "./config.ts";
 
 export interface LoadConfigOptions {
   configPath?: string;
@@ -13,7 +21,9 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<Confi
   const projectRaw = projectConfig?.raw;
   const themeBaseDir = projectConfig ? dirname(projectConfig.path) : cwd;
   const themeSelector = options.theme ?? themeSelectorFrom(projectRaw);
-  const themeRaw = themeSelector ? await readThemeConfig(themeSelector, themeBaseDir, cwd, options.theme !== undefined) : undefined;
+  const themeRaw = themeSelector
+    ? await readThemeConfig(themeSelector, themeBaseDir, cwd, options.theme !== undefined)
+    : undefined;
 
   let config = cloneConfig(defaultConfig);
   if (themeRaw) config = mergeThemeConfig(themeRaw, config);
@@ -21,11 +31,14 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<Confi
   return config;
 }
 
-async function readProjectConfig(configPath: string | undefined, cwd: string): Promise<{ raw: unknown; path: string } | undefined> {
+async function readProjectConfig(
+  configPath: string | undefined,
+  cwd: string,
+): Promise<{ raw: unknown; path: string } | undefined> {
   if (configPath) {
     const path = resolve(cwd, configPath);
     try {
-      return { raw: parseToml(await Bun.file(path).text(), "Invalid config"), path };
+      return { raw: parseToml(await readFile(path, "utf8"), "Invalid config"), path };
     } catch (error) {
       if (isValidationError(error)) throw error;
       throw new Error(`Could not read config file "${configPath}". ${messageFrom(error)}`);
@@ -34,7 +47,7 @@ async function readProjectConfig(configPath: string | undefined, cwd: string): P
 
   const path = join(cwd, "mdtoemail.toml");
   try {
-    return { raw: parseToml(await Bun.file(path).text(), "Invalid config"), path };
+    return { raw: parseToml(await readFile(path, "utf8"), "Invalid config"), path };
   } catch (error) {
     if (isFileNotFoundError(error)) return undefined;
     if (isValidationError(error)) throw error;
@@ -42,10 +55,15 @@ async function readProjectConfig(configPath: string | undefined, cwd: string): P
   }
 }
 
-async function readThemeConfig(selector: string, themeBaseDir: string, cwd: string, fromCli: boolean): Promise<unknown> {
+async function readThemeConfig(
+  selector: string,
+  themeBaseDir: string,
+  cwd: string,
+  fromCli: boolean,
+): Promise<unknown> {
   const path = resolveThemePath(selector, themeBaseDir, cwd, fromCli);
   try {
-    return parseToml(await Bun.file(path).text(), "Invalid theme");
+    return parseToml(await readFile(path, "utf8"), "Invalid theme");
   } catch (error) {
     if (isValidationError(error)) throw error;
     throw new Error(`Could not read theme file "${path}". ${messageFrom(error)}`);
@@ -67,10 +85,19 @@ function themeSelectorFrom(raw: unknown): string | undefined {
   return value;
 }
 
-function resolveThemePath(selector: string, themeBaseDir: string, cwd: string, fromCli: boolean): string {
+function resolveThemePath(
+  selector: string,
+  themeBaseDir: string,
+  cwd: string,
+  fromCli: boolean,
+): string {
   const trimmed = selector.trim();
   if (!trimmed) {
-    throw new Error(fromCli ? "Invalid config: --theme must not be empty." : "Invalid config: theme.extends must not be empty.");
+    throw new Error(
+      fromCli
+        ? "Invalid config: --theme must not be empty."
+        : "Invalid config: theme.extends must not be empty.",
+    );
   }
 
   if (!isThemePathLike(trimmed)) {
@@ -82,12 +109,18 @@ function resolveThemePath(selector: string, themeBaseDir: string, cwd: string, f
 }
 
 function isThemePathLike(selector: string): boolean {
-  return selector.startsWith(".") || selector.startsWith("/") || selector.includes("/") || selector.includes("\\") || selector.endsWith(".toml");
+  return (
+    selector.startsWith(".") ||
+    selector.startsWith("/") ||
+    selector.includes("/") ||
+    selector.includes("\\") ||
+    selector.endsWith(".toml")
+  );
 }
 
 function parseToml(text: string, label: "Invalid config" | "Invalid theme"): unknown {
   try {
-    return Bun.TOML.parse(text);
+    return parse(text);
   } catch (error) {
     throw new Error(`${label}: ${messageFrom(error)}`);
   }
@@ -98,7 +131,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isValidationError(error: unknown): boolean {
-  return error instanceof Error && (error.message.startsWith("Invalid config:") || error.message.startsWith("Invalid theme:"));
+  return (
+    error instanceof Error &&
+    (error.message.startsWith("Invalid config:") || error.message.startsWith("Invalid theme:"))
+  );
 }
 
 function isFileNotFoundError(error: unknown): boolean {

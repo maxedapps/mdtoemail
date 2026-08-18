@@ -1,6 +1,6 @@
 # Notes from a quiet Tuesday
 
-*July 14, 2026 · Berlin*
+_July 14, 2026 · Berlin_
 
 A small collection of things I have been thinking about lately.
 

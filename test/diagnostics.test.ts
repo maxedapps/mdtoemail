@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import {
   addDiagnostic,
   addDiagnosticOnce,
@@ -6,7 +6,7 @@ import {
   countWarnings,
   formatDiagnostic,
   type Diagnostic,
-} from "../src/diagnostics";
+} from "../src/diagnostics.ts";
 
 describe("diagnostics", () => {
   test("stores diagnostics", () => {
@@ -87,11 +87,13 @@ describe("diagnostics", () => {
     addFinalHtmlSizeDiagnostic("é".repeat((85 * 1024) / 2), exactMultibyte);
 
     expect(below).toEqual([]);
-    expect(exactAscii).toEqual([{
-      code: "large-email-html",
-      severity: "warning",
-      message: "Generated HTML is 87040 bytes; email clients may clip messages at this size.",
-    }]);
+    expect(exactAscii).toEqual([
+      {
+        code: "large-email-html",
+        severity: "warning",
+        message: "Generated HTML is 87040 bytes; email clients may clip messages at this size.",
+      },
+    ]);
     expect(exactMultibyte).toEqual(exactAscii);
   });
 

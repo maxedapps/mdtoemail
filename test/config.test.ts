@@ -1,10 +1,10 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "vitest";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { defaultConfig, mergeConfig, validateResolvedConfig } from "../src/config";
-import { loadConfig } from "../src/config-loader";
-import { deriveOutputPath } from "../src/cli";
+import { defaultConfig, mergeConfig, validateResolvedConfig } from "../src/config.ts";
+import { loadConfig } from "../src/config-loader.ts";
+import { deriveOutputPath } from "../src/cli.ts";
 
 const tempDirs: string[] = [];
 
@@ -17,6 +17,36 @@ describe("config", () => {
     const dir = await makeTempDir();
 
     expect(await loadConfig({ cwd: dir })).toEqual(defaultConfig);
+  });
+
+  test("loads the complete checked-in example config", async () => {
+    const configPath = join(process.cwd(), "mdtoemail.example.toml");
+
+    expect(await loadConfig({ configPath })).toEqual(defaultConfig);
+  });
+
+  test("prefixes malformed project TOML as an invalid config", async () => {
+    const dir = await makeTempDir();
+    await writeFile(join(dir, "mdtoemail.toml"), "[email\nstrict = true\n");
+
+    await expect(loadConfig({ cwd: dir })).rejects.toThrow(/^Invalid config:/);
+  });
+
+  test("prefixes malformed theme TOML as an invalid theme", async () => {
+    const dir = await makeTempDir();
+    await writeFile(join(dir, "theme.toml"), '[theme\nlink_color = "#123456"\n');
+
+    await expect(loadConfig({ cwd: dir, theme: "./theme.toml" })).rejects.toThrow(
+      /^Invalid theme:/,
+    );
+  });
+
+  test("reports an explicitly requested missing config file", async () => {
+    const dir = await makeTempDir();
+
+    await expect(loadConfig({ cwd: dir, configPath: "missing.toml" })).rejects.toThrow(
+      'Could not read config file "missing.toml".',
+    );
   });
 
   test("maps a full TOML override", () => {
@@ -183,7 +213,9 @@ describe("config", () => {
     expect(() => mergeConfig({ theme: { link_color: "blue; display:flex" } })).toThrow(
       "Invalid config: theme.link_color contains unsupported CSS characters or functions.",
     );
-    expect(() => mergeConfig({ theme: { background_color: "url(https://example.com/x.png)" } })).toThrow(
+    expect(() =>
+      mergeConfig({ theme: { background_color: "url(https://example.com/x.png)" } }),
+    ).toThrow(
       "Invalid config: theme.background_color contains unsupported CSS characters or functions.",
     );
     expect(() => mergeConfig({ theme: { content_padding: "calc(16px + 1vw)" } })).toThrow(
@@ -265,25 +297,31 @@ describe("config", () => {
         ...defaultConfig,
         theme: { ...defaultConfig.theme, backgroundColor: "url(https://example.com/x.png)" },
       }),
-    ).toThrow("Invalid config: theme.backgroundColor contains unsupported CSS characters or functions.");
+    ).toThrow(
+      "Invalid config: theme.backgroundColor contains unsupported CSS characters or functions.",
+    );
     expect(() =>
       validateResolvedConfig({
         ...defaultConfig,
         theme: { ...defaultConfig.theme, contentPadding: "calc(16px + 1vw)" },
       }),
-    ).toThrow("Invalid config: theme.contentPadding contains unsupported CSS characters or functions.");
+    ).toThrow(
+      "Invalid config: theme.contentPadding contains unsupported CSS characters or functions.",
+    );
     expect(() =>
       validateResolvedConfig({
         ...defaultConfig,
         email: { ...defaultConfig.email, outerPadding: "oklch(60% 0.2 40)" },
       }),
-    ).toThrow("Invalid config: email.outerPadding contains unsupported CSS characters or functions.");
+    ).toThrow(
+      "Invalid config: email.outerPadding contains unsupported CSS characters or functions.",
+    );
   });
 
   test("loads an explicit TOML config file", async () => {
     const dir = await makeTempDir();
     const path = join(dir, "custom.toml");
-    await writeFile(path, "[theme]\nbackground_color = \"#abcdef\"\n");
+    await writeFile(path, '[theme]\nbackground_color = "#abcdef"\n');
 
     expect((await loadConfig({ configPath: path })).theme.backgroundColor).toBe("#abcdef");
   });
@@ -292,8 +330,11 @@ describe("config", () => {
     const dir = await makeTempDir();
     const configPath = join(dir, "mdtoemail.toml");
     await mkdir(join(dir, "themes"));
-    await writeFile(configPath, "[theme]\nextends = \"newsletter\"\nlink_color = \"#dc2626\"\n");
-    await writeFile(join(dir, "themes", "newsletter.toml"), "[theme]\nbackground_color = \"#fef3c7\"\nlink_color = \"#92400e\"\n");
+    await writeFile(configPath, '[theme]\nextends = "newsletter"\nlink_color = "#dc2626"\n');
+    await writeFile(
+      join(dir, "themes", "newsletter.toml"),
+      '[theme]\nbackground_color = "#fef3c7"\nlink_color = "#92400e"\n',
+    );
 
     const config = await loadConfig({ configPath });
 
@@ -304,27 +345,36 @@ describe("config", () => {
   test("loads a named theme from cwd", async () => {
     const dir = await makeTempDir();
     await mkdir(join(dir, "themes"));
-    await writeFile(join(dir, "themes", "minimal.toml"), "[theme]\nbackground_color = \"#ffffff\"\n");
+    await writeFile(join(dir, "themes", "minimal.toml"), '[theme]\nbackground_color = "#ffffff"\n');
 
-    expect((await loadConfig({ cwd: dir, theme: "minimal" })).theme.backgroundColor).toBe("#ffffff");
+    expect((await loadConfig({ cwd: dir, theme: "minimal" })).theme.backgroundColor).toBe(
+      "#ffffff",
+    );
   });
 
   test("CLI theme option overrides config-selected theme", async () => {
     const dir = await makeTempDir();
     const configPath = join(dir, "mdtoemail.toml");
     await mkdir(join(dir, "themes"));
-    await writeFile(configPath, "[theme]\nextends = \"newsletter\"\n");
-    await writeFile(join(dir, "themes", "newsletter.toml"), "[theme]\nbackground_color = \"#fef3c7\"\n");
-    await writeFile(join(dir, "themes", "minimal.toml"), "[theme]\nbackground_color = \"#ffffff\"\n");
+    await writeFile(configPath, '[theme]\nextends = "newsletter"\n');
+    await writeFile(
+      join(dir, "themes", "newsletter.toml"),
+      '[theme]\nbackground_color = "#fef3c7"\n',
+    );
+    await writeFile(join(dir, "themes", "minimal.toml"), '[theme]\nbackground_color = "#ffffff"\n');
 
-    expect((await loadConfig({ configPath, theme: "minimal" })).theme.backgroundColor).toBe("#ffffff");
+    expect((await loadConfig({ configPath, theme: "minimal" })).theme.backgroundColor).toBe(
+      "#ffffff",
+    );
   });
 
   test("loads CLI path-like themes relative to cwd", async () => {
     const dir = await makeTempDir();
-    await writeFile(join(dir, "theme.toml"), "[theme]\nbackground_color = \"#fafafa\"\n");
+    await writeFile(join(dir, "theme.toml"), '[theme]\nbackground_color = "#fafafa"\n');
 
-    expect((await loadConfig({ cwd: dir, theme: "./theme.toml" })).theme.backgroundColor).toBe("#fafafa");
+    expect((await loadConfig({ cwd: dir, theme: "./theme.toml" })).theme.backgroundColor).toBe(
+      "#fafafa",
+    );
   });
 
   test("rejects invalid theme files", async () => {
@@ -344,7 +394,7 @@ describe("config", () => {
       "Invalid theme: email.pretty is not allowed.",
     );
 
-    await writeFile(join(dir, "theme.toml"), "[theme]\nextends = \"base\"\n");
+    await writeFile(join(dir, "theme.toml"), '[theme]\nextends = "base"\n');
     await expect(loadConfig({ cwd: dir, theme: "./theme.toml" })).rejects.toThrow(
       "Invalid theme: theme.extends is not allowed.",
     );
@@ -352,7 +402,7 @@ describe("config", () => {
 
   test("rejects unsafe CSS token values in theme files", async () => {
     const dir = await makeTempDir();
-    await writeFile(join(dir, "theme.toml"), "[theme]\nlink_color = \"blue; display:flex\"\n");
+    await writeFile(join(dir, "theme.toml"), '[theme]\nlink_color = "blue; display:flex"\n');
 
     await expect(loadConfig({ cwd: dir, theme: "./theme.toml" })).rejects.toThrow(
       "Invalid theme: theme.link_color contains unsupported CSS characters or functions.",
@@ -362,7 +412,9 @@ describe("config", () => {
   test("missing theme files fail clearly", async () => {
     const dir = await makeTempDir();
 
-    await expect(loadConfig({ cwd: dir, theme: "missing" })).rejects.toThrow(join(dir, "themes", "missing.toml"));
+    await expect(loadConfig({ cwd: dir, theme: "missing" })).rejects.toThrow(
+      join(dir, "themes", "missing.toml"),
+    );
   });
 });
 

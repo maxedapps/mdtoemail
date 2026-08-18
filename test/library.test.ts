@@ -1,8 +1,8 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "vitest";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { compileMarkdownEmail, defaultConfig, type Config, type Diagnostic } from "../src/index";
+import { compileMarkdownEmail, defaultConfig, type Config, type Diagnostic } from "../src/index.ts";
 
 const tempDirs: string[] = [];
 const originalCwd = process.cwd();
@@ -38,7 +38,9 @@ describe("compileMarkdownEmail", () => {
   test("uses and escapes an explicit title", async () => {
     const result = await compileMarkdownEmail("# Hello", { title: `A <b>title</b> & "quoted"` });
 
-    expect(result.html).toContain("<title>A &lt;b&gt;title&lt;/b&gt; &amp; &quot;quoted&quot;</title>");
+    expect(result.html).toContain(
+      "<title>A &lt;b&gt;title&lt;/b&gt; &amp; &quot;quoted&quot;</title>",
+    );
     expect(result.html).not.toContain("<title>A <b>");
     expect(result.html).not.toContain("<b>title</b>");
   });
@@ -64,14 +66,16 @@ describe("compileMarkdownEmail", () => {
     expect(Object.isFrozen(result.diagnostics)).toBe(true);
     expect(Object.isFrozen(result.diagnostics[0])).toBe(true);
     expect(() => {
-      (result.diagnostics as Diagnostic[]).push({
-        code: "unsafe-link-url",
-        severity: "warning",
-        message: "caller mutation",
+      Object.defineProperty(result.diagnostics, result.diagnostics.length, {
+        value: {
+          code: "unsafe-link-url",
+          severity: "warning",
+          message: "caller mutation",
+        } satisfies Diagnostic,
       });
     }).toThrow();
     expect(() => {
-      (result.diagnostics[0] as Diagnostic).message = "caller mutation";
+      Object.defineProperty(result.diagnostics[0], "message", { value: "caller mutation" });
     }).toThrow();
   });
 
@@ -103,14 +107,15 @@ describe("compileMarkdownEmail", () => {
   });
 
   test("rejects malformed runtime config", async () => {
-    await expect(
-      compileMarkdownEmail("# Hello", {
-        config: {
-          ...defaultConfig,
-          markdown: { ...defaultConfig.markdown, gfm: "yes" as unknown as boolean },
-        },
-      }),
-    ).rejects.toThrow("Invalid config: markdown.gfm must be a boolean.");
+    const config: Config = {
+      ...defaultConfig,
+      markdown: { ...defaultConfig.markdown },
+    };
+    Object.defineProperty(config.markdown, "gfm", { value: "yes" });
+
+    await expect(compileMarkdownEmail("# Hello", { config })).rejects.toThrow(
+      "Invalid config: markdown.gfm must be a boolean.",
+    );
   });
 
   test("rejects unsafe theme tokens", async () => {
@@ -121,7 +126,9 @@ describe("compileMarkdownEmail", () => {
           theme: { ...defaultConfig.theme, backgroundColor: "url(https://example.com/x.png)" },
         },
       }),
-    ).rejects.toThrow("Invalid config: theme.backgroundColor contains unsupported CSS characters or functions.");
+    ).rejects.toThrow(
+      "Invalid config: theme.backgroundColor contains unsupported CSS characters or functions.",
+    );
   });
 
   test("warns when the complete document reaches 85 KiB UTF-8", async () => {
@@ -135,7 +142,9 @@ describe("compileMarkdownEmail", () => {
     const at = await compileMarkdownEmail("x".repeat(extra + 1));
 
     expect(encoder.encode(below.html).byteLength).toBe(limit - 1);
-    expect(below.diagnostics.some((diagnostic) => diagnostic.code === "large-email-html")).toBe(false);
+    expect(below.diagnostics.some((diagnostic) => diagnostic.code === "large-email-html")).toBe(
+      false,
+    );
     expect(encoder.encode(at.html).byteLength).toBe(limit);
     expect(at.diagnostics).toContainEqual({
       code: "large-email-html",
@@ -158,7 +167,9 @@ describe("compileMarkdownEmail", () => {
     };
 
     process.chdir(dir);
-    const result = await compileMarkdownEmail("[Site](https://example.com) [bad](javascript:alert(1))");
+    const result = await compileMarkdownEmail(
+      "[Site](https://example.com) [bad](javascript:alert(1))",
+    );
 
     expect(result.html).toContain(`color:${defaultConfig.theme.linkColor}`);
     expect(result.html).not.toContain("#ff00ff");
