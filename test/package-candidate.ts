@@ -3,9 +3,10 @@ import { createServer } from "node:net";
 import { mkdtemp, rm, writeFile, copyFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import packageJson from "../package.json";
 
 const root = join(import.meta.dir, "..");
-const version = "0.2.0";
+const version = packageJson.version;
 const wranglerBin = join(root, "node_modules", ".bin", "wrangler");
 const workerTemplateDir = join(root, "test", "worker");
 const readyTimeoutMs = 60_000;

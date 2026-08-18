@@ -1,51 +1,32 @@
 # mdtoemail
 
-Convert Markdown into standalone, email-friendly HTML with inline styles and a conservative table layout. It generates HTML; it does not send email.
+Convert Markdown into standalone, email-friendly HTML with inline styles and a conservative table layout. `mdtoemail` generates HTML; it does not send email.
 
-## Runtime
+## Requirements
 
-The **CLI** requires [Bun 1.3+](https://bun.sh/). The **library** is portable JavaScript: it uses no Node-only APIs and runs in Bun, Cloudflare Workers, and other standard JS runtimes.
+- **CLI:** [Bun 1.3+](https://bun.sh/)
+- **Library:** portable JavaScript for Bun, Cloudflare Workers, and other standard JS runtimes
 
-## Library
+## CLI quick start
 
-`compileMarkdownEmail` takes a Markdown string and returns a complete HTML document plus structured diagnostics. It does not read files, write output, print to the console, or send email.
-
-```ts
-import { compileMarkdownEmail } from "mdtoemail";
-
-const { html, diagnostics, frontmatter } = await compileMarkdownEmail(
-  "# Hello\n\nThis is **bold**.",
-  { title: "Hello" },
-);
-```
-
-`html` is a full standalone document (doctype, table layout, inline styles). `diagnostics` is an immutable list of warnings and info. `frontmatter` is `{ kind, value }` or `null`. Pass an optional resolved `config` object; the library does not load TOML files.
-
-## Quick start
+Run without installing globally:
 
 ```bash
-bun add mdtoemail
+bunx mdtoemail newsletter.md -o newsletter.html
+```
+
+Or install globally:
+
+```bash
+bun add --global mdtoemail
 mdtoemail newsletter.md -o newsletter.html
 ```
 
-From a clone:
+`npx mdtoemail ...` also works when Bun 1.3+ is installed and available on `PATH`; npx does not remove the Bun runtime requirement.
 
-```bash
-git clone https://github.com/maxedapps/mdtoemail.git
-cd mdtoemail
-bun install
+If `--output` is omitted, `newsletter.md` becomes `newsletter.html`. Existing output files are overwritten.
 
-bun run src/cli.ts newsletter.md -o newsletter.html
-```
-
-If `--output` is omitted, `newsletter.md` becomes `newsletter.html`. Open the generated file directly in a browser:
-
-```bash
-open newsletter.html       # macOS
-xdg-open newsletter.html   # Linux
-```
-
-## Options
+### Options
 
 ```txt
 -o, --output <file>      Output HTML file
@@ -58,15 +39,32 @@ xdg-open newsletter.html   # Linux
 -v, --version            Show version
 ```
 
-## Configuration
+## Library
 
-Copy the complete config example:
+Install the package:
 
 ```bash
-cp mdtoemail.example.toml mdtoemail.toml
+bun add mdtoemail
 ```
 
-`mdtoemail.toml` is loaded automatically from the current directory. Use `--config` to select another file.
+Compile a Markdown string:
+
+```ts
+import { compileMarkdownEmail } from "mdtoemail";
+
+const { html, diagnostics, frontmatter } = await compileMarkdownEmail(
+  "# Hello\n\nThis is **bold**.",
+  { title: "Hello" },
+);
+```
+
+`html` is a complete document. `diagnostics` contains warnings and informational messages. `frontmatter` is `{ kind, value }` or `null`.
+
+The library performs no file I/O, logging, config loading, or email delivery. Pass an optional resolved `config` object when needed.
+
+## Configuration
+
+The CLI automatically loads `mdtoemail.toml` from the current directory. Select another file with `--config`.
 
 ```toml
 [markdown]
@@ -75,8 +73,6 @@ frontmatter = true
 
 [email]
 container_width = 600
-outer_padding = "24px 12px"
-warnings = true
 strict = false
 pretty = false
 
@@ -92,11 +88,34 @@ line_height = "1.5"
 content_padding = "32px"
 ```
 
-See [`mdtoemail.example.toml`](./mdtoemail.example.toml) for every supported theme token.
+See [`mdtoemail.example.toml`](./mdtoemail.example.toml) for every option and theme token.
+
+### Themes
+
+Use a theme file directly:
+
+```bash
+bunx mdtoemail input.md --theme ./themes/newsletter.toml -o email.html
+```
+
+Or resolve a named theme from `./themes/<name>.toml`:
+
+```bash
+bunx mdtoemail input.md --theme newsletter -o email.html
+```
+
+A config can extend the same named theme:
+
+```toml
+[theme]
+extends = "newsletter"
+```
+
+See [`examples/themes/`](./examples/themes/) for `minimal`, `newsletter`, and `transactional` examples.
 
 ### Syntax highlighting
 
-Highlighting is opt-in. Enable it in the [complete config example](./mdtoemail.example.toml), and use strict mode for production (`email.strict = true` or `--strict`):
+Highlighting is opt-in. Use strict mode for production output:
 
 ```toml
 [markdown]
@@ -107,7 +126,7 @@ syntax_highlighting_mode = "light" # or "dark"
 strict = true
 ```
 
-Ordinary fences and optional one-based highlighted ranges with visual line numbers are supported:
+Standard fences, highlighted line ranges, and visual line numbers are supported:
 
 ````md
 ```ts
@@ -119,94 +138,26 @@ const ready = true;
 ```
 ````
 
-Bundled labels/aliases are: Bash (`bash`, `sh`, `shell`, `shellscript`), CSS (`css`), diff (`diff`), HTML (`html`), JavaScript (`js`, `javascript`), JSON (`json`), JSX (`jsx`), Markdown (`md`, `markdown`), Python (`py`, `python`), SQL (`sql`), TOML (`toml`), TSX (`tsx`), TypeScript (`ts`, `typescript`), and YAML (`yaml`, `yml`). `text`, `txt`, and `plaintext` intentionally remain plain.
+Bundled languages: Bash, CSS, diff, HTML, JavaScript, JSON, JSX, Markdown, Python, SQL, TOML, TSX, TypeScript, and YAML. Unknown labels fall back to plain code.
 
-`syntax_highlighting_mode` selects one coherent fixed profile per generated mail. Light uses GitHub-light tokens with `#f6f8fa` background, `#24292e` foreground, `#fff8c5` selected lines, and `#6e7781` line numbers. Dark uses GitHub-dark-default tokens with `#0d1117` background, `#e6edf3` foreground, `#3b3424` selected lines, and `#8b949e` line numbers. Both use `Courier New, Courier, monospace` at `14px/20px`. Arbitrary palettes and highlighted-block typography remain unsupported; plain-code theme tokens do not alter either fixed profile.
+For reliable output, keep each code block within 80 display columns, 20,000 UTF-16 code units, 200 lines, and 8,000 tokens; keep final HTML below 85 KiB. Violations produce diagnostics. Highlighting and recipient-controlled dark mode remain email-client dependent.
 
-Keep each block at most 80 conservative display columns per line, 20,000 UTF-16 code units, 200 logical lines, and 8,000 produced tokens; final HTML must stay below 85 KiB. The 80-column limit is a diagnostic threshold, not a wrapping guarantee: unbroken text can still overflow narrow clients even when strict conversion is warning-free. Unsupported labels fall back to plain code with an info diagnostic. Tokenization errors or block limits preserve plain code and warn; malformed ranges are ignored and warn. Strict mode prevents warning-bearing output from being written.
+## Production guidance
 
-Indentation uses NBSP characters and tabs expand to four-column stops. Copying may therefore include NBSPs, expanded tabs, or visual line numbers depending on the client. Syntax-highlighting compatibility remains best-effort and unqualified because no post-provider client matrix was run. Recipient-controlled dark mode may still invert or adjust colors; test important messages with your actual provider and target clients.
-
-Try the warning-free canonical example:
-
-```bash
-# Light profile
-bun run src/cli.ts examples/code-highlighting.md \
-  --config examples/code-highlighting.toml --strict \
-  -o examples/code-highlighting.html
-
-# Dark profile and surrounding email theme
-bun run src/cli.ts examples/code-highlighting.md \
-  --config examples/code-highlighting-dark.toml --strict \
-  -o examples/code-highlighting-dark.html
-```
-
-### Reuse one config
-
-```bash
-bun run src/cli.ts notes/july.md --config newsletter.toml -o notes/july.html
-bun run src/cli.ts notes/august.md --config newsletter.toml -o notes/august.html
-```
-
-Batch conversion:
-
-```bash
-for file in notes/*.md; do
-  bun run src/cli.ts "$file" --config newsletter.toml -o "${file%.md}.html"
-done
-```
-
-### Reusable themes
-
-```bash
-# Theme file
-bun run src/cli.ts input.md --theme ./themes/newsletter.toml -o email.html
-
-# Named theme: resolves themes/newsletter.toml
-bun run src/cli.ts input.md --theme newsletter -o email.html
-```
-
-A config can also select a named theme:
-
-```toml
-[theme]
-extends = "newsletter"
-```
-
-Included themes: `minimal`, `newsletter`, and `transactional` under `examples/themes/`.
-
-## Personal-notes newsletter example
-
-Two Markdown issues share one warm serif config:
-
-- `examples/personal-notes.toml`
-- `examples/personal-notes-july.md`
-- `examples/personal-notes-august.md`
-
-```bash
-bun run src/cli.ts examples/personal-notes-july.md \
-  --config examples/personal-notes.toml \
-  -o examples/personal-notes-july.html
-
-open examples/personal-notes-july.html
-```
-
-More examples are available under `examples/`.
-
-## Important behavior
-
-- Existing output files are overwritten.
-- Diagnostics are written to stderr. Use `--strict` or `email.strict = true` for CI.
-- Raw HTML is escaped; it is never passed through.
+- Diagnostics are written to stderr; use `--strict` or `email.strict = true` in CI.
+- Raw HTML is escaped.
 - Images require absolute HTTPS URLs.
 - Unsafe URLs such as `javascript:`, `data:`, and `file:` are removed.
 - Theme values are safe design tokens, not arbitrary CSS.
 - Use system font stacks; custom web fonts are unreliable in email clients.
 - Test generated HTML with your email provider and target clients before sending.
 
-## Development
+More complete inputs and configs are available under [`examples/`](./examples/).
+
+## Contributing
 
 ```bash
+bun install
 bun test
 bun run typecheck
 bun run build
