@@ -45,13 +45,14 @@
     "format": "oxfmt . --write",
     "format:check": "oxfmt . --check",
     "lint": "oxlint src test/*.ts tsdown.config.ts && npm run lint:worker",
-    "lint:worker": "oxlint --config .oxlintrc.worker.json test/worker/worker.ts && sh -c 'out=$(mktemp -d); trap \"rm -rf $out\" EXIT; wrangler deploy --dry-run --config test/worker/wrangler.jsonc --outdir \"$out\"'",
+    "lint:worker": "oxlint --config .oxlintrc.worker.json test/worker/worker.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:worker": "sh -c 'out=$(mktemp -d); trap \"rm -rf $out\" EXIT; wrangler deploy --dry-run --config test/worker/wrangler.jsonc --outdir \"$out\"'",
     "build": "tsdown",
     "prepack": "npm run build",
     "test:candidate": "node test/package-candidate.ts",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build"
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run test:worker"
   },
   "dependencies": {
     "@shikijs/core": "4.3.1",
